@@ -15,7 +15,9 @@ You will have to create a Facebook-like social network that will contain the fol
 
 ## Frontend
 
-Frontend development is the art of creating sites and web applications that render on the "client-side". It includes everything that users experience directly: text colors and styles, images, graphs and tables, buttons, colors, and navigation menus. It focuses on making requests to the backend in order to get specific chunks of data to be used or send data to be stored on the backend.
+Frontend development is the art of creating sites and web applications that render on the "client-side".
+It includes everything that users experience directly: text colors and styles, images, graphs and tables, buttons, colors, and navigation menus.
+It focuses on making requests to the backend in order to get specific chunks of data to be used or send data to be stored on the backend.
 
 HTML, CSS, and Javascript are the languages used for frontend development. Responsiveness and performance are two main objectives of the frontend. Frontend frameworks may be used to simplify a developer's work.
 
@@ -146,7 +148,9 @@ You can implement your own package for sessions and cookies or you can take a lo
 
 When navigating the social network the user should be able to follow and unfollow other users. Needless to say that to unfollow a user you have to be following him/her.
 
-Regarding following someone, the user must initiate this by sending a follow request to the desired user. The recipient user can then choose to "accept" or "decline" the request. However, if the recipient user has a public profile (as explained in the next section), this request-and-accept process is bypassed and the user who sent the request automatically starts following the user with the pubic profile.
+Regarding following someone, the user must initiate this by sending a follow request to the desired user. The recipient user can then choose to "accept" or "decline" the request.
+However, if the recipient user has a public profile (as explained in the next section),
+this request-and-accept process is bypassed and the user who sent the request automatically starts following the user with the pubic profile.
 
 ## Profile
 

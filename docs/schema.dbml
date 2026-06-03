@@ -1,0 +1,174 @@
+Project SocialNetwork {
+  database_type: 'SQLite'
+  Note: 'Database schema for a Facebook-like social network (v1.1.0)'
+}
+
+Table users {
+  id uuid [pk]
+  email varchar [unique, not null]
+  password_hash varchar [not null]
+  first_name varchar [not null]
+  last_name varchar [not null]
+  dob date [not null]
+  avatar_url varchar
+  nickname varchar
+  about_me text
+  is_public boolean [default: true]
+
+  // Counter Caches for rapid UI rendering
+  follower_count integer [default: 0]
+  following_count integer [default: 0]
+
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  Note: 'Core user entity, now includes counter caches for social stats.'
+}
+
+Table sessions {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  token varchar [unique, not null]
+  expires_at timestamp [not null]
+}
+
+Table followers {
+  follower_id uuid [ref: > users.id]
+  followee_id uuid [ref: > users.id]
+  status varchar [not null, note: '"pending" or "accepted"']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (follower_id, followee_id) [pk]
+  }
+}
+
+Table posts {
+  id uuid [pk]
+  user_id uuid [ref: > users.id, not null]
+  group_id uuid [ref: > groups.id, null]
+  content text [not null]
+  image_url varchar
+  privacy varchar [not null, note: '"public", "almost_private", "private"']
+
+  // Counter Caches
+  comment_count integer [default: 0]
+  like_count integer [default: 0]
+
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table post_audiences {
+  post_id uuid [ref: > posts.id]
+  user_id uuid [ref: > users.id]
+
+  indexes {
+    (post_id, user_id) [pk]
+  }
+}
+
+Table post_likes {
+  post_id uuid [ref: > posts.id]
+  user_id uuid [ref: > users.id]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (post_id, user_id) [pk]
+  }
+
+  Note: 'Tracks who liked a post to prevent duplicate likes and allow un-liking.'
+}
+
+Table comments {
+  id uuid [pk]
+  post_id uuid [ref: > posts.id, not null]
+  user_id uuid [ref: > users.id, not null]
+  parent_comment_id uuid [ref: > comments.id, null]
+  content text [not null]
+  image_url varchar
+
+  // Counter Caches
+  like_count integer [default: 0]
+
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table comment_likes {
+  comment_id uuid [ref: > comments.id]
+  user_id uuid [ref: > users.id]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (comment_id, user_id) [pk]
+  }
+}
+
+Table groups {
+  id uuid [pk]
+  creator_id uuid [ref: > users.id, not null]
+  title varchar [not null]
+  description text
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table group_members {
+  group_id uuid [ref: > groups.id]
+  user_id uuid [ref: > users.id]
+  status varchar [not null, note: '"pending_invite", "pending_request", "accepted"']
+
+  indexes {
+    (group_id, user_id) [pk]
+  }
+}
+
+Table events {
+  id uuid [pk]
+  group_id uuid [ref: > groups.id, not null]
+  creator_id uuid [ref: > users.id, not null]
+  title varchar [not null]
+  description text
+  event_date timestamp [not null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table event_rsvps {
+  event_id uuid [ref: > events.id]
+  user_id uuid [ref: > users.id]
+  status varchar [not null, note: '"going", "not_going", "pending_invite"']
+
+  indexes {
+    (event_id, user_id) [pk]
+  }
+}
+
+Table dm_threads {
+  id uuid [pk]
+  user1_id uuid [ref: > users.id]
+  user2_id uuid [ref: > users.id]
+  last_message_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (user1_id, user2_id) [unique]
+  }
+
+  Note: 'Creates a distinct "Chat Room" entity for direct messages. Makes querying the /chats list incredibly fast.'
+}
+
+Table messages {
+  id uuid [pk]
+  sender_id uuid [ref: > users.id, not null]
+  dm_thread_id uuid [ref: > dm_threads.id, null, note: 'Used if this is a DM']
+  group_id uuid [ref: > groups.id, null, note: 'Used if this is a group chat']
+  content text [not null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  Note: 'Consolidated table for both DM and Group messages.'
+}
+
+Table notifications {
+  id uuid [pk]
+  user_id uuid [ref: > users.id, not null]
+  type varchar [not null, note: '"follow_request", "group_invite", "event_invite", "group_request", "event_created"']
+  source_id uuid [not null]
+  is_read boolean [default: false]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}

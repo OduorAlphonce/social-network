@@ -1,0 +1,488 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Social Network API",
+    "description": "REST API documentation for the React/Go social network project. Includes endpoints for posts, nested comments, chat rooms, and real-time websockets.",
+    "version": "1.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/api/v1",
+      "description": "Local development server"
+    }
+  ],
+  "tags": [
+    { "name": "Auth", "description": "Authentication and session management" },
+    {
+      "name": "Users",
+      "description": "Profile discovery, search, and follower graphs"
+    },
+    { "name": "Posts", "description": "Timeline and group posts management" },
+    { "name": "Comments", "description": "Nested comment threads" },
+    { "name": "Chats", "description": "Direct messages and group chat rooms" },
+    { "name": "Groups", "description": "Group and event invitations" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session_token"
+      }
+    },
+    "schemas": {
+      "Response": {
+        "type": "object",
+        "required": ["status", "message"],
+        "properties": {
+          "status": { "type": "string", "enum": ["success", "error"] },
+          "message": { "type": "string" },
+          "data": { "description": "The response payload." }
+        }
+      },
+      "PublicUser": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "first_name": { "type": "string" },
+          "last_name": { "type": "string" },
+          "nickname": { "type": "string", "nullable": true },
+          "avatar_url": { "type": "string", "nullable": true },
+          "follower_count": { "type": "integer" },
+          "following_count": { "type": "integer" }
+        }
+      },
+      "PrivateUser": {
+        "type": "object",
+        "allOf": [
+          { "$ref": "#/components/schemas/PublicUser" },
+          {
+            "type": "object",
+            "properties": {
+              "email": { "type": "string", "format": "email" },
+              "dob": { "type": "string", "format": "date" }
+            }
+          }
+        ]
+      },
+      "Post": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "author": { "$ref": "#/components/schemas/PublicUser" },
+          "content": { "type": "string" },
+          "image_url": { "type": "string", "nullable": true },
+          "privacy": {
+            "type": "string",
+            "enum": ["public", "almost_private", "private"]
+          },
+          "comment_count": { "type": "integer" },
+          "like_count": { "type": "integer" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Comment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "post_id": { "type": "string", "format": "uuid" },
+          "author": { "$ref": "#/components/schemas/PublicUser" },
+          "content": { "type": "string" },
+          "like_count": { "type": "integer" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "replies": {
+            "type": "array",
+            "description": "Immediate children of this comment. Forms a recursive tree.",
+            "items": { "$ref": "#/components/schemas/Comment" }
+          }
+        }
+      },
+      "ChatRoom": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Group ID or a generated DM Thread ID"
+          },
+          "type": { "type": "string", "enum": ["dm", "group"] },
+          "name": {
+            "type": "string",
+            "description": "Group title or the other user's name"
+          },
+          "last_message": { "type": "string" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Logout the current user",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Logged out successfully. Cookie cleared." }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get all users / Search users",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search by name, nickname, or email",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/PublicUser" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "patch": {
+        "tags": ["Users"],
+        "summary": "Update authenticated user's profile",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Profile updated" }
+        }
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Delete authenticated user's account",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "204": { "description": "Account deleted" }
+        }
+      }
+    },
+    "/users/me/comments": {
+      "get": {
+        "tags": ["Users", "Comments"],
+        "summary": "Get all comments made by the authenticated user",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of the user's comments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Comment" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/followers": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "format": "uuid" }
+        }
+      ],
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get a user's followers",
+        "responses": {
+          "200": { "description": "Array of PublicUsers" }
+        }
+      }
+    },
+    "/users/{id}/following": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "format": "uuid" }
+        }
+      ],
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get users followed by this user",
+        "responses": {
+          "200": { "description": "Array of PublicUsers" }
+        }
+      }
+    },
+    "/users/{id}/posts": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "format": "uuid" }
+        }
+      ],
+      "get": {
+        "tags": ["Users", "Posts"],
+        "summary": "Get all posts made by a specific user",
+        "responses": {
+          "200": { "description": "Array of Posts" }
+        }
+      }
+    },
+    "/users/{id}/follow": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "format": "uuid" }
+        }
+      ],
+      "post": {
+        "tags": ["Users"],
+        "summary": "Follow a user",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Followed or request pending" } }
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Unfollow a user or cancel follow request",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Successfully unfollowed" } }
+      }
+    },
+    "/posts": {
+      "get": {
+        "tags": ["Posts"],
+        "summary": "Get all posts (Timeline Feed)",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Feed of posts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Post" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Posts"],
+        "summary": "Create a post",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "201": { "description": "Post created" } }
+      }
+    },
+    "/posts/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "format": "uuid" }
+        }
+      ],
+      "patch": {
+        "tags": ["Posts"],
+        "summary": "Update a post",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Post updated" } }
+      },
+      "delete": {
+        "tags": ["Posts"],
+        "summary": "Delete a post",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "204": { "description": "Post deleted" } }
+      }
+    },
+    "/posts/{id}/comments": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "format": "uuid" }
+        }
+      ],
+      "get": {
+        "tags": ["Comments"],
+        "summary": "Get all top-level comments (with nested replies)",
+        "responses": {
+          "200": {
+            "description": "A tree structure of comments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Comment" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Comments"],
+        "summary": "Add a comment",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "201": { "description": "Comment added" } }
+      }
+    },
+    "/comments/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "format": "uuid" }
+        }
+      ],
+      "patch": {
+        "tags": ["Comments"],
+        "summary": "Update a comment",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Comment updated" } }
+      },
+      "delete": {
+        "tags": ["Comments"],
+        "summary": "Delete a comment",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "204": { "description": "Comment deleted" } }
+      }
+    },
+    "/chats": {
+      "get": {
+        "tags": ["Chats"],
+        "summary": "Get all active chat rooms",
+        "description": "Returns a list of all DMs and Group chats the user is part of, sorted by recent activity.",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/ChatRoom" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chats/dm": {
+      "post": {
+        "tags": ["Chats"],
+        "summary": "Open a direct message with a user",
+        "description": "Creates or retrieves an existing DM thread with the target user.",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["target_user_id"],
+                "properties": {
+                  "target_user_id": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "DM room opened" }
+        }
+      }
+    },
+    "/groups/{id}/invite": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "format": "uuid" }
+        }
+      ],
+      "post": {
+        "tags": ["Groups"],
+        "summary": "Invite a user to a group",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Invitation sent" } }
+      }
+    },
+    "/events/{id}/invite": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "format": "uuid" }
+        }
+      ],
+      "post": {
+        "tags": ["Groups"],
+        "summary": "Invite a user to an event",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Invitation sent" } }
+      }
+    }
+  }
+}
