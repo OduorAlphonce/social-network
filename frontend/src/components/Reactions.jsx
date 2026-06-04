@@ -1,11 +1,11 @@
 import { BiDislike, BiLike } from "react-icons/bi";
 
-const Like = () => {
-  return <BiLike />;
+const Like = ({ onClick }) => {
+  return <BiLike onClick={onClick} />;
 };
 
-const Dislike = () => {
-  return <BiDislike />;
+const Dislike = ({ onClick }) => {
+  return <BiDislike onClick={onClick} />;
 };
 
 export { Like, Dislike };
