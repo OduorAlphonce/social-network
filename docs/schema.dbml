@@ -48,7 +48,7 @@ Table posts {
   group_id uuid [ref: > groups.id, null]
   content text [not null]
   image_url varchar
-  privacy varchar [not null, note: '"public", "almost_private", "private"']
+  privacy varchar [not null, note: 'Allowed values: "public", "almost_private", "private"; DB-level CHECK constraint recommended: CHECK (privacy IN (\'public\', \'almost_private\', \'private\'))']
 
   // Counter Caches
   comment_count integer [default: 0]
@@ -82,7 +82,7 @@ Table comments {
   id uuid [pk]
   post_id uuid [ref: > posts.id, not null]
   user_id uuid [ref: > users.id, not null]
-  parent_comment_id uuid [ref: > comments.id, null]
+  parent_comment_id uuid [ref: > comments.id, null, note: 'ON DELETE CASCADE — deleting a parent comment should remove its replies']
   content text [not null]
   image_url varchar
 
@@ -90,6 +90,11 @@ Table comments {
   like_count integer [default: 0]
 
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (post_id)
+    (parent_comment_id)
+  }
 }
 
 Table comment_likes {
