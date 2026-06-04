@@ -1,0 +1,32 @@
+.post-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 10px;
+  
+}
+
+.post-header {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.post-header > img {
+  border-radius: 50%;
+  border: 1px solid;
+  width: 80px;
+  height: 80px;
+}
+
+.post-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.post-footer {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  justify-content: center;
+}
