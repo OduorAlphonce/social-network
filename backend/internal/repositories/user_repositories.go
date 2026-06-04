@@ -34,3 +34,13 @@ func (ur *userRepository) GetUserByID(id uuid.UUID) (*models.User, error) {
 
 	return &user, nil
 }
+
+func (ur *userRepository) DeleteUser(id uuid.UUID) error {
+	_, err := r.db.Exec(`
+		DELETE FROM users WHERE id = ?
+	`, id.String())
+	if err != nil {
+		return err
+	}
+	return nil
+}
