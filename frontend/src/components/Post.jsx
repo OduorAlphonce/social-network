@@ -39,7 +39,10 @@ const Post = () => {
     <div className="post-container">
       <div className="post-header">
         <img src="" alt="avatar" />
-        <h5>User Name</h5>
+        <div className="post-bio">
+          <h5>User Name</h5>
+          <small>16:06</small>
+        </div>
       </div>
       <div className="post-body">
         <img src="" alt="post-image" />
