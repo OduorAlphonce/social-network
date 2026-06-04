@@ -3,51 +3,29 @@ package repositories
 import (
 	"database/sql"
 	"errors"
-	"social-network/internal/models"
-)
+	"time"
 
-type FollowerRepository interface {
-	Create(f *models.Follower) error
-	UpdateStatus(followerID, followingID, status string) error
-	Delete(followerID, followingID string) error
-	GetStatus(followerID, followingID string) (string, error)
-	GetFollowers(userID string) ([]*models.User, error)
-	GetFollowing(userID string) ([]*models.User, error)
-}
+	"github.com/gofrs/uuid/v5"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
+)
 
 type sqliteFollowerRepository struct {
 	db *sql.DB
 }
 
-func NewFollowerRepository(db *sql.DB) FollowerRepository {
+func NewFollowerRepository(db *sql.DB) FollowersRepository {
 	return &sqliteFollowerRepository{db: db}
 }
 
-func (r *sqliteFollowerRepository) Create(f *models.Follower) error {
-	query := `INSERT INTO followers (follower_id, following_id, status, created_at) VALUES (?, ?, ?, ?)`
-	_, err := r.db.Exec(query, f.FollowerID, f.FollowingID, f.Status, f.CreatedAt)
+func (r *sqliteFollowerRepository) Follow(followerID, followeeID uuid.UUID, status models.Status) error {
+	query := `INSERT INTO followers (follower_id, followee_id, status, created_at) VALUES (?, ?, ?, ?)`
+	_, err := r.db.Exec(query, followerID, followeeID, string(status), time.Now())
 	return err
 }
 
-func (r *sqliteFollowerRepository) UpdateStatus(followerID, followingID, status string) error {
-	query := `UPDATE followers SET status = ? WHERE follower_id = ? AND following_id = ?`
-	res, err := r.db.Exec(query, status, followerID, followingID)
-	if err != nil {
-		return err
-	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return errors.New("follow request not found")
-	}
-	return nil
-}
-
-func (r *sqliteFollowerRepository) Delete(followerID, followingID string) error {
-	query := `DELETE FROM followers WHERE follower_id = ? AND following_id = ?`
-	res, err := r.db.Exec(query, followerID, followingID)
+func (r *sqliteFollowerRepository) Unfollow(followerID, followeeID uuid.UUID) error {
+	query := `DELETE FROM followers WHERE follower_id = ? AND followee_id = ?`
+	res, err := r.db.Exec(query, followerID, followeeID)
 	if err != nil {
 		return err
 	}
@@ -61,24 +39,56 @@ func (r *sqliteFollowerRepository) Delete(followerID, followingID string) error 
 	return nil
 }
 
-func (r *sqliteFollowerRepository) GetStatus(followerID, followingID string) (string, error) {
-	query := `SELECT status FROM followers WHERE follower_id = ? AND following_id = ?`
+func (r *sqliteFollowerRepository) AcceptFollower(followerID, followeeID uuid.UUID) error {
+	query := `UPDATE followers SET status = ? WHERE follower_id = ? AND followee_id = ?`
+	res, err := r.db.Exec(query, string(models.Accepted), followerID, followeeID)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return errors.New("follow request not found")
+	}
+	return nil
+}
+
+func (r *sqliteFollowerRepository) RejectFollower(followerID, followeeID uuid.UUID) error {
+	query := `DELETE FROM followers WHERE follower_id = ? AND followee_id = ?`
+	res, err := r.db.Exec(query, followerID, followeeID)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return errors.New("follow request not found")
+	}
+	return nil
+}
+
+func (r *sqliteFollowerRepository) GetStatus(followerID, followeeID uuid.UUID) (models.Status, error) {
+	query := `SELECT status FROM followers WHERE follower_id = ? AND followee_id = ?`
 	var status string
-	err := r.db.QueryRow(query, followerID, followingID).Scan(&status)
+	err := r.db.QueryRow(query, followerID, followeeID).Scan(&status)
 	if err == sql.ErrNoRows {
 		return "none", nil
 	}
 	if err != nil {
 		return "", err
 	}
-	return status, nil
+	return models.Status(status), nil
 }
 
-func (r *sqliteFollowerRepository) GetFollowers(userID string) ([]*models.User, error) {
-	query := `SELECT u.id, u.email, u.first_name, u.last_name, u.date_of_birth, u.avatar, u.nickname, u.about_me, u.is_public, u.created_at, u.updated_at 
+func (r *sqliteFollowerRepository) GetFollowers(userID uuid.UUID) ([]*models.User, error) {
+	query := `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.dob, u.avatar, u.nickname, u.about_me, u.is_public, u.follower_count, u.following_count, u.created_at 
 	FROM followers f 
 	JOIN users u ON f.follower_id = u.id 
-	WHERE f.following_id = ? AND f.status = 'accepted'`
+	WHERE f.followee_id = ? AND f.status = 'accepted'`
 
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
@@ -90,7 +100,7 @@ func (r *sqliteFollowerRepository) GetFollowers(userID string) ([]*models.User, 
 	for rows.Next() {
 		u := &models.User{}
 		var avatar, nickname, aboutMe sql.NullString
-		err := rows.Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.DateOfBirth, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.CreatedAt, &u.UpdatedAt)
+		err := rows.Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &u.DOB, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &u.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -102,10 +112,10 @@ func (r *sqliteFollowerRepository) GetFollowers(userID string) ([]*models.User, 
 	return users, nil
 }
 
-func (r *sqliteFollowerRepository) GetFollowing(userID string) ([]*models.User, error) {
-	query := `SELECT u.id, u.email, u.first_name, u.last_name, u.date_of_birth, u.avatar, u.nickname, u.about_me, u.is_public, u.created_at, u.updated_at 
+func (r *sqliteFollowerRepository) GetFollowing(userID uuid.UUID) ([]*models.User, error) {
+	query := `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.dob, u.avatar, u.nickname, u.about_me, u.is_public, u.follower_count, u.following_count, u.created_at 
 	FROM followers f 
-	JOIN users u ON f.following_id = u.id 
+	JOIN users u ON f.followee_id = u.id 
 	WHERE f.follower_id = ? AND f.status = 'accepted'`
 
 	rows, err := r.db.Query(query, userID)
@@ -118,7 +128,7 @@ func (r *sqliteFollowerRepository) GetFollowing(userID string) ([]*models.User, 
 	for rows.Next() {
 		u := &models.User{}
 		var avatar, nickname, aboutMe sql.NullString
-		err := rows.Scan(&u.ID, &u.Email, &u.FirstName, &u.LastName, &u.DateOfBirth, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.CreatedAt, &u.UpdatedAt)
+		err := rows.Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &u.DOB, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &u.CreatedAt)
 		if err != nil {
 			return nil, err
 		}

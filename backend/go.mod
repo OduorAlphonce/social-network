@@ -1,9 +1,9 @@
-module social-network
+module learn.zone01kisumu.ke/git/qquinton/social-network
 
 go 1.22.2
 
 require (
-	github.com/google/uuid v1.6.0 // indirect
-	github.com/mattn/go-sqlite3 v1.14.44 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
+	github.com/gofrs/uuid/v5 v5.4.0
+	github.com/mattn/go-sqlite3 v1.14.44
+	golang.org/x/crypto v0.21.0
 )

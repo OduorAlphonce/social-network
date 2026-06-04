@@ -5,11 +5,11 @@ import (
 	"errors"
 	"net/http"
 
-	"social-network/internal/api/middleware"
-	"social-network/internal/models"
-	"social-network/internal/services"
+	"github.com/gofrs/uuid/v5"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/middleware"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
 )
-
 
 type FollowerHandler struct {
 	followerService services.FollowerService
@@ -42,7 +42,13 @@ func (h *FollowerHandler) Follow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	status, err := h.followerService.Follow(currentUser.ID, input.FollowingID)
+	followingUUID, err := uuid.FromString(input.FollowingID)
+	if err != nil {
+		http.Error(w, "Invalid following_id format.", http.StatusBadRequest)
+		return
+	}
+
+	status, err := h.followerService.Follow(currentUser.ID, followingUUID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -74,7 +80,13 @@ func (h *FollowerHandler) Unfollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.followerService.Unfollow(currentUser.ID, input.FollowingID)
+	followingUUID, err := uuid.FromString(input.FollowingID)
+	if err != nil {
+		http.Error(w, "Invalid following_id format.", http.StatusBadRequest)
+		return
+	}
+
+	err = h.followerService.Unfollow(currentUser.ID, followingUUID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -105,7 +117,13 @@ func (h *FollowerHandler) AcceptFollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.followerService.AcceptFollow(input.FollowerID, currentUser.ID)
+	followerUUID, err := uuid.FromString(input.FollowerID)
+	if err != nil {
+		http.Error(w, "Invalid follower_id format.", http.StatusBadRequest)
+		return
+	}
+
+	err = h.followerService.AcceptFollow(followerUUID, currentUser.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -136,7 +154,13 @@ func (h *FollowerHandler) RejectFollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.followerService.RejectFollow(input.FollowerID, currentUser.ID)
+	followerUUID, err := uuid.FromString(input.FollowerID)
+	if err != nil {
+		http.Error(w, "Invalid follower_id format.", http.StatusBadRequest)
+		return
+	}
+
+	err = h.followerService.RejectFollow(followerUUID, currentUser.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -160,9 +184,16 @@ func (h *FollowerHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine whose followers to list (default to self, or get from query param "user_id")
-	targetUserID := r.URL.Query().Get("user_id")
-	if targetUserID == "" {
+	var targetUserID uuid.UUID
+	targetUserIDStr := r.URL.Query().Get("user_id")
+	if targetUserIDStr != "" {
+		parsed, err := uuid.FromString(targetUserIDStr)
+		if err != nil {
+			http.Error(w, "Invalid user_id format.", http.StatusBadRequest)
+			return
+		}
+		targetUserID = parsed
+	} else {
 		targetUserID = currentUser.ID
 	}
 
@@ -181,7 +212,7 @@ func (h *FollowerHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Map to UserResponse to avoid exposing passwords
+	// Map to UserResponse to avoid exposing passwords/hashes
 	var response []*models.UserResponse
 	for _, f := range followers {
 		response = append(response, &models.UserResponse{
@@ -189,7 +220,7 @@ func (h *FollowerHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
 			Email:       f.Email,
 			FirstName:   f.FirstName,
 			LastName:    f.LastName,
-			DateOfBirth: f.DateOfBirth,
+			DateOfBirth: f.DOB.Format("2006-01-02"),
 			Avatar:      f.Avatar,
 			Nickname:    f.Nickname,
 			AboutMe:     f.AboutMe,
@@ -214,8 +245,16 @@ func (h *FollowerHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	targetUserID := r.URL.Query().Get("user_id")
-	if targetUserID == "" {
+	var targetUserID uuid.UUID
+	targetUserIDStr := r.URL.Query().Get("user_id")
+	if targetUserIDStr != "" {
+		parsed, err := uuid.FromString(targetUserIDStr)
+		if err != nil {
+			http.Error(w, "Invalid user_id format.", http.StatusBadRequest)
+			return
+		}
+		targetUserID = parsed
+	} else {
 		targetUserID = currentUser.ID
 	}
 
@@ -241,7 +280,7 @@ func (h *FollowerHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 			Email:       f.Email,
 			FirstName:   f.FirstName,
 			LastName:    f.LastName,
-			DateOfBirth: f.DateOfBirth,
+			DateOfBirth: f.DOB.Format("2006-01-02"),
 			Avatar:      f.Avatar,
 			Nickname:    f.Nickname,
 			AboutMe:     f.AboutMe,
@@ -254,7 +293,7 @@ func (h *FollowerHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(response)
 }
 
-func (h *FollowerHandler) verifyAccess(currentUserID, targetUserID string) error {
+func (h *FollowerHandler) verifyAccess(currentUserID, targetUserID uuid.UUID) error {
 	targetUser, err := h.userService.GetByID(targetUserID)
 	if err != nil {
 		return errors.New("user not found")
@@ -270,10 +309,9 @@ func (h *FollowerHandler) verifyAccess(currentUserID, targetUserID string) error
 		return err
 	}
 
-	if status != "accepted" {
+	if status != string(models.Accepted) {
 		return errors.New("profile is private. You must follow this user to view their activity.")
 	}
 
 	return nil
 }
-

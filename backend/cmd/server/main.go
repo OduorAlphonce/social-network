@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"os"
 
-	"social-network/internal/api/handlers"
-	"social-network/internal/api/routers"
-	"social-network/internal/db"
-	"social-network/internal/repositories"
-	"social-network/internal/services"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/handlers"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/routers"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/db"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/repositories"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
 )
 
 func main() {

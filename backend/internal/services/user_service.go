@@ -5,11 +5,10 @@ import (
 	"regexp"
 	"time"
 
-	"social-network/internal/models"
-	"social-network/internal/repositories"
-
-	"github.com/google/uuid"
+	"github.com/gofrs/uuid/v5"
 	"golang.org/x/crypto/bcrypt"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/repositories"
 )
 
 type UserService interface {
@@ -17,7 +16,7 @@ type UserService interface {
 	Login(email, password string) (*models.Session, error)
 	Logout(sessionID string) error
 	Authenticate(sessionID string) (*models.User, error)
-	GetByID(id string) (*models.User, error)
+	GetByID(id uuid.UUID) (*models.User, error)
 }
 
 type userService struct {
@@ -49,9 +48,15 @@ func (s *userService) Register(req *models.CreateUserRequest) (*models.UserRespo
 	}
 
 	// Check if email already exists
-	existingUser, _ := s.userRepo.GetByEmail(req.Email)
+	existingUser, _ := s.userRepo.GetUserByEmail(req.Email)
 	if existingUser != nil {
 		return nil, errors.New("email already registered")
+	}
+
+	// Parse Date of Birth
+	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
+	if err != nil {
+		return nil, errors.New("invalid date of birth format, must be YYYY-MM-DD")
 	}
 
 	// Hash password
@@ -60,25 +65,30 @@ func (s *userService) Register(req *models.CreateUserRequest) (*models.UserRespo
 		return nil, err
 	}
 
-	userID := uuid.New().String()
+	userID, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 
 	user := &models.User{
-		ID:          userID,
-		Email:       req.Email,
-		Password:    string(hashedPassword),
-		FirstName:   req.FirstName,
-		LastName:    req.LastName,
-		DateOfBirth: req.DateOfBirth,
-		Avatar:      req.Avatar,
-		Nickname:    req.Nickname,
-		AboutMe:     req.AboutMe,
-		IsPublic:    req.IsPublic,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:             userID,
+		Email:          req.Email,
+		PassHash:       string(hashedPassword),
+		FirstName:      req.FirstName,
+		LastName:       req.LastName,
+		DOB:            dob,
+		Avatar:         req.Avatar,
+		Nickname:       req.Nickname,
+		AboutMe:        req.AboutMe,
+		IsPublic:       req.IsPublic,
+		FollowerCount:  0,
+		FollowingCount: 0,
+		CreatedAt:      now,
 	}
 
-	err = s.userRepo.Create(user)
+	err = s.userRepo.CreateUser(user)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +98,7 @@ func (s *userService) Register(req *models.CreateUserRequest) (*models.UserRespo
 		Email:       user.Email,
 		FirstName:   user.FirstName,
 		LastName:    user.LastName,
-		DateOfBirth: user.DateOfBirth,
+		DateOfBirth: user.DOB.Format("2006-01-02"),
 		Avatar:      user.Avatar,
 		Nickname:    user.Nickname,
 		AboutMe:     user.AboutMe,
@@ -98,24 +108,29 @@ func (s *userService) Register(req *models.CreateUserRequest) (*models.UserRespo
 }
 
 func (s *userService) Login(email, password string) (*models.Session, error) {
-	user, err := s.userRepo.GetByEmail(email)
+	user, err := s.userRepo.GetUserByEmail(email)
 	if err != nil {
 		return nil, errors.New("invalid email or password")
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(user.PassHash), []byte(password))
 	if err != nil {
 		return nil, errors.New("invalid email or password")
 	}
 
-	sessionID := uuid.New().String()
+	sessionID, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+
 	session := &models.Session{
 		ID:        sessionID,
 		UserID:    user.ID,
 		ExpiresAt: time.Now().Add(24 * time.Hour), // 24 hours validity
+		CreatedAt: time.Now(),
 	}
 
-	err = s.sessionRepo.Create(session)
+	err = s.sessionRepo.CreateSession(session)
 	if err != nil {
 		return nil, err
 	}
@@ -124,24 +139,32 @@ func (s *userService) Login(email, password string) (*models.Session, error) {
 }
 
 func (s *userService) Logout(sessionID string) error {
-	return s.sessionRepo.Delete(sessionID)
+	sessUUID, err := uuid.FromString(sessionID)
+	if err != nil {
+		return err
+	}
+	return s.sessionRepo.DeleteSession(sessUUID)
 }
 
 func (s *userService) Authenticate(sessionID string) (*models.User, error) {
-	session, err := s.sessionRepo.GetByID(sessionID)
+	sessUUID, err := uuid.FromString(sessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := s.sessionRepo.GetSessionByID(sessUUID)
 	if err != nil {
 		return nil, err
 	}
 
 	if time.Now().After(session.ExpiresAt) {
-		s.sessionRepo.Delete(sessionID)
+		_ = s.sessionRepo.DeleteSession(sessUUID)
 		return nil, errors.New("session expired")
 	}
 
-	return s.userRepo.GetByID(session.UserID)
+	return s.userRepo.GetUserByID(session.UserID)
 }
 
-func (s *userService) GetByID(id string) (*models.User, error) {
-	return s.userRepo.GetByID(id)
+func (s *userService) GetByID(id uuid.UUID) (*models.User, error) {
+	return s.userRepo.GetUserByID(id)
 }
-

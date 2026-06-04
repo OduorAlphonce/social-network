@@ -2,41 +2,41 @@ package services
 
 import (
 	"errors"
-	"time"
 
-	"social-network/internal/models"
-	"social-network/internal/repositories"
+	"github.com/gofrs/uuid/v5"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/repositories"
 )
 
 type FollowerService interface {
-	Follow(followerID, followingID string) (string, error)
-	Unfollow(followerID, followingID string) error
-	AcceptFollow(followerID, followingID string) error
-	RejectFollow(followerID, followingID string) error
-	GetFollowers(userID string) ([]*models.User, error)
-	GetFollowing(userID string) ([]*models.User, error)
-	GetFollowStatus(followerID, followingID string) (string, error)
+	Follow(followerID, followingID uuid.UUID) (string, error)
+	Unfollow(followerID, followingID uuid.UUID) error
+	AcceptFollow(followerID, followingID uuid.UUID) error
+	RejectFollow(followerID, followingID uuid.UUID) error
+	GetFollowers(userID uuid.UUID) ([]*models.User, error)
+	GetFollowing(userID uuid.UUID) ([]*models.User, error)
+	GetFollowStatus(followerID, followingID uuid.UUID) (string, error)
 }
 
 type followerService struct {
-	followerRepo repositories.FollowerRepository
+	followerRepo repositories.FollowersRepository
 	userRepo     repositories.UserRepository
 }
 
-func NewFollowerService(fr repositories.FollowerRepository, ur repositories.UserRepository) FollowerService {
+func NewFollowerService(fr repositories.FollowersRepository, ur repositories.UserRepository) FollowerService {
 	return &followerService{
 		followerRepo: fr,
 		userRepo:     ur,
 	}
 }
 
-func (s *followerService) Follow(followerID, followingID string) (string, error) {
+func (s *followerService) Follow(followerID, followingID uuid.UUID) (string, error) {
 	if followerID == followingID {
 		return "", errors.New("cannot follow yourself")
 	}
 
 	// Verify target user exists
-	targetUser, err := s.userRepo.GetByID(followingID)
+	targetUser, err := s.userRepo.GetUserByID(followingID)
 	if err != nil {
 		return "", errors.New("target user not found")
 	}
@@ -48,64 +48,61 @@ func (s *followerService) Follow(followerID, followingID string) (string, error)
 	}
 
 	if status != "none" {
-		return status, errors.New("follow relationship or request already exists")
+		return string(status), errors.New("follow relationship or request already exists")
 	}
 
 	// If target user is public, follow directly. If private, send follow request (pending status).
-	newStatus := "pending"
+	newStatus := models.Pending
 	if targetUser.IsPublic {
-		newStatus = "accepted"
+		newStatus = models.Accepted
 	}
 
-	follower := &models.Follower{
-		FollowerID:  followerID,
-		FollowingID: followingID,
-		Status:      newStatus,
-		CreatedAt:   time.Now(),
-	}
-
-	err = s.followerRepo.Create(follower)
+	err = s.followerRepo.Follow(followerID, followingID, newStatus)
 	if err != nil {
 		return "", err
 	}
 
-	return newStatus, nil
+	return string(newStatus), nil
 }
 
-func (s *followerService) Unfollow(followerID, followingID string) error {
-	return s.followerRepo.Delete(followerID, followingID)
+func (s *followerService) Unfollow(followerID, followingID uuid.UUID) error {
+	return s.followerRepo.Unfollow(followerID, followingID)
 }
 
-func (s *followerService) AcceptFollow(followerID, followingID string) error {
+func (s *followerService) AcceptFollow(followerID, followingID uuid.UUID) error {
 	status, err := s.followerRepo.GetStatus(followerID, followingID)
 	if err != nil {
 		return err
 	}
-	if status != "pending" {
+	if status != models.Pending {
 		return errors.New("no pending follow request to accept")
 	}
-	return s.followerRepo.UpdateStatus(followerID, followingID, "accepted")
+	return s.followerRepo.AcceptFollower(followerID, followingID)
 }
 
-func (s *followerService) RejectFollow(followerID, followingID string) error {
+func (s *followerService) RejectFollow(followerID, followingID uuid.UUID) error {
 	status, err := s.followerRepo.GetStatus(followerID, followingID)
 	if err != nil {
 		return err
 	}
-	if status != "pending" {
+	if status != models.Pending {
 		return errors.New("no pending follow request to reject")
 	}
-	return s.followerRepo.Delete(followerID, followingID)
+	return s.followerRepo.RejectFollower(followerID, followingID)
 }
 
-func (s *followerService) GetFollowers(userID string) ([]*models.User, error) {
+func (s *followerService) GetFollowers(userID uuid.UUID) ([]*models.User, error) {
 	return s.followerRepo.GetFollowers(userID)
 }
 
-func (s *followerService) GetFollowing(userID string) ([]*models.User, error) {
+func (s *followerService) GetFollowing(userID uuid.UUID) ([]*models.User, error) {
 	return s.followerRepo.GetFollowing(userID)
 }
 
-func (s *followerService) GetFollowStatus(followerID, followingID string) (string, error) {
-	return s.followerRepo.GetStatus(followerID, followingID)
+func (s *followerService) GetFollowStatus(followerID, followingID uuid.UUID) (string, error) {
+	status, err := s.followerRepo.GetStatus(followerID, followingID)
+	if err != nil {
+		return "", err
+	}
+	return string(status), nil
 }

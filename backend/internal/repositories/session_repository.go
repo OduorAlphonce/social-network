@@ -3,14 +3,10 @@ package repositories
 import (
 	"database/sql"
 	"errors"
-	"social-network/internal/models"
-)
 
-type SessionRepository interface {
-	Create(session *models.Session) error
-	GetByID(id string) (*models.Session, error)
-	Delete(id string) error
-}
+	"github.com/gofrs/uuid/v5"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
+)
 
 type sqliteSessionRepository struct {
 	db *sql.DB
@@ -20,16 +16,16 @@ func NewSessionRepository(db *sql.DB) SessionRepository {
 	return &sqliteSessionRepository{db: db}
 }
 
-func (r *sqliteSessionRepository) Create(s *models.Session) error {
-	query := `INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)`
-	_, err := r.db.Exec(query, s.ID, s.UserID, s.ExpiresAt)
+func (r *sqliteSessionRepository) CreateSession(s *models.Session) error {
+	query := `INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)`
+	_, err := r.db.Exec(query, s.ID, s.UserID, s.ExpiresAt, s.CreatedAt)
 	return err
 }
 
-func (r *sqliteSessionRepository) GetByID(id string) (*models.Session, error) {
-	query := `SELECT id, user_id, expires_at FROM sessions WHERE id = ?`
+func (r *sqliteSessionRepository) GetSessionByID(id uuid.UUID) (*models.Session, error) {
+	query := `SELECT id, user_id, expires_at, created_at FROM sessions WHERE id = ?`
 	s := &models.Session{}
-	err := r.db.QueryRow(query, id).Scan(&s.ID, &s.UserID, &s.ExpiresAt)
+	err := r.db.QueryRow(query, id).Scan(&s.ID, &s.UserID, &s.ExpiresAt, &s.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("session not found")
 	}
@@ -39,7 +35,7 @@ func (r *sqliteSessionRepository) GetByID(id string) (*models.Session, error) {
 	return s, nil
 }
 
-func (r *sqliteSessionRepository) Delete(id string) error {
+func (r *sqliteSessionRepository) DeleteSession(id uuid.UUID) error {
 	query := `DELETE FROM sessions WHERE id = ?`
 	_, err := r.db.Exec(query, id)
 	return err

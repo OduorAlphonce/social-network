@@ -3,9 +3,9 @@ package routers
 import (
 	"net/http"
 
-	"social-network/internal/api/handlers"
-	"social-network/internal/api/middleware"
-	"social-network/internal/services"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/handlers"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/middleware"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
 )
 
 func RegisterRoutes(mux *http.ServeMux, userHandler *handlers.UserHandler, followerHandler *handlers.FollowerHandler, userService services.UserService) {

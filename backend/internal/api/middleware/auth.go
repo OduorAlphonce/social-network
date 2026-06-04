@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"social-network/internal/models"
-	"social-network/internal/services"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
 )
 
 type contextKey string

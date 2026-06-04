@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"social-network/internal/models"
-	"social-network/internal/services"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
 )
 
 type UserHandler struct {
@@ -151,7 +151,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Set HttpOnly session cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
-		Value:    session.ID,
+		Value:    session.ID.String(),
 		Expires:  session.ExpiresAt,
 		HttpOnly: true,
 		Path:     "/",
@@ -161,7 +161,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{
 		"message": "Login successful",
-		"token":   session.ID,
+		"token":   session.ID.String(),
 	})
 }
 
@@ -206,7 +206,7 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		Email:       user.Email,
 		FirstName:   user.FirstName,
 		LastName:    user.LastName,
-		DateOfBirth: user.DateOfBirth,
+		DateOfBirth: user.DOB.Format("2006-01-02"),
 		Avatar:      user.Avatar,
 		Nickname:    user.Nickname,
 		AboutMe:     user.AboutMe,
