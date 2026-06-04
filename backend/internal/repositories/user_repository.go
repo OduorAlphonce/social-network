@@ -19,7 +19,7 @@ func NewUserRepository(db *sql.DB) UserRepository {
 func (ur *userRepository) CreateUser(u *models.User) error {
 	query := `INSERT INTO users (id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, follower_count, following_count, created_at) 
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := r.db.Exec(query, u.ID, u.Email, u.PassHash, u.FirstName, u.LastName, u.DOB, u.Avatar, u.Nickname, u.AboutMe, u.IsPublic, u.FollowerCount, u.FollowingCount, u.CreatedAt)
+	_, err := ur.db.Exec(query, u.ID, u.Email, u.PassHash, u.FirstName, u.LastName, u.DOB, u.Avatar, u.Nickname, u.AboutMe, u.IsPublic, u.FollowerCount, u.FollowingCount, u.CreatedAt)
 	return err
 }
 
@@ -27,7 +27,7 @@ func (ur *userRepository) GetUserByID(id uuid.UUID) (*models.User, error) {
 	query := `SELECT id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, follower_count, following_count, created_at FROM users WHERE id = ?`
 	u := &models.User{}
 	var avatar, nickname, aboutMe sql.NullString
-	err := r.db.QueryRow(query, id).Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &u.DOB, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &u.CreatedAt)
+	err := ur.db.QueryRow(query, id).Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &u.DOB, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &u.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("user not found")
 	}
@@ -44,7 +44,7 @@ func (ur *userRepository) GetUserByEmail(email string) (*models.User, error) {
 	query := `SELECT id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, follower_count, following_count, created_at FROM users WHERE email = ?`
 	u := &models.User{}
 	var avatar, nickname, aboutMe sql.NullString
-	err := r.db.QueryRow(query, email).Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &u.DOB, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &u.CreatedAt)
+	err := ur.db.QueryRow(query, email).Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &u.DOB, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &u.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("user not found")
 	}
@@ -64,7 +64,7 @@ func (ur *userRepository) UpdateUserProfile(id uuid.UUID) (*models.User, error) 
 
 // DeleteUser is a stub to satisfy the interface; @fcharles is implementing this.
 func (ur *userRepository) DeleteUser(id uuid.UUID) error {
-	_, err := r.db.Exec(`
+	_, err := ur.db.Exec(`
 		DELETE FROM users WHERE id = ?
 	`, id.String())
 	if err != nil {
