@@ -46,8 +46,8 @@
           "id": { "type": "string", "format": "uuid" },
           "first_name": { "type": "string" },
           "last_name": { "type": "string" },
-          "nickname": { "type": "string", "nullable": true },
-          "avatar_url": { "type": "string", "nullable": true },
+          "nickname": { "type": ["string", "null"] },
+          "avatar_url": { "type": ["string", "null"] },
           "follower_count": { "type": "integer" },
           "following_count": { "type": "integer" }
         }
@@ -71,10 +71,11 @@
           "id": { "type": "string", "format": "uuid" },
           "author": { "$ref": "#/components/schemas/PublicUser" },
           "content": { "type": "string" },
-          "image_url": { "type": "string", "nullable": true },
+          "image_url": { "type": ["string", "null"] },
           "privacy": {
             "type": "string",
-            "enum": ["public", "almost_private", "private"]
+            "enum": ["public", "almost_private", "private"],
+            "description": "Privacy level. Server enforces allowed values. A DB CHECK constraint is recommended."
           },
           "comment_count": { "type": "integer" },
           "like_count": { "type": "integer" },
@@ -88,6 +89,7 @@
           "post_id": { "type": "string", "format": "uuid" },
           "author": { "$ref": "#/components/schemas/PublicUser" },
           "content": { "type": "string" },
+          "image_url": { "type": ["string", "null"] },
           "like_count": { "type": "integer" },
           "created_at": { "type": "string", "format": "date-time" },
           "replies": {
@@ -381,6 +383,25 @@
         "tags": ["Posts"],
         "summary": "Get all posts (Timeline Feed)",
         "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 0, "minimum": 0 }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Feed of posts",
@@ -404,6 +425,27 @@
         "tags": ["Posts"],
         "summary": "Create a post",
         "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["content"],
+                "properties": {
+                  "content": { "type": "string" },
+                  "privacy": {
+                    "type": "string",
+                    "enum": ["public", "almost_private", "private"],
+                    "default": "public"
+                  },
+                  "image": { "type": "string", "format": "binary" },
+                  "group_id": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
         "responses": { "201": { "description": "Post created" } }
       }
     },
@@ -416,10 +458,50 @@
           "schema": { "type": "string", "format": "uuid" }
         }
       ],
+      "get": {
+        "tags": ["Posts"],
+        "summary": "Get a single post by ID",
+        "description": "Retrieve the full detail of a single post for permalink or detail views.",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Post detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/Post" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Post not found" }
+        }
+      },
       "patch": {
         "tags": ["Posts"],
         "summary": "Update a post",
         "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": { "type": "string" },
+                  "privacy": {
+                    "type": "string",
+                    "enum": ["public", "almost_private", "private"]
+                  },
+                  "image_url": { "type": ["string", "null"] }
+                }
+              }
+            }
+          }
+        },
         "responses": { "200": { "description": "Post updated" } }
       },
       "delete": {
@@ -436,6 +518,23 @@
           "in": "path",
           "required": true,
           "schema": { "type": "string", "format": "uuid" }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "default": 20,
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        {
+          "name": "offset",
+          "in": "query",
+          "required": false,
+          "schema": { "type": "integer", "default": 0, "minimum": 0 }
         }
       ],
       "get": {
@@ -443,7 +542,7 @@
         "summary": "Get all top-level comments (with nested replies)",
         "responses": {
           "200": {
-            "description": "A tree structure of comments",
+            "description": "A tree structure of top-level comments (each may include nested replies)",
             "content": {
               "application/json": {
                 "schema": {
@@ -464,10 +563,29 @@
         "tags": ["Comments"],
         "summary": "Add a comment",
         "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["content"],
+                "properties": {
+                  "content": { "type": "string" },
+                  "parent_comment_id": {
+                    "type": ["string", "null"],
+                    "format": "uuid"
+                  },
+                  "image": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
         "responses": { "201": { "description": "Comment added" } }
       }
     },
-    "/comments/{id}": {
+    "/posts/{id}/like": {
       "parameters": [
         {
           "name": "id",
@@ -476,17 +594,39 @@
           "schema": { "type": "string", "format": "uuid" }
         }
       ],
-      "patch": {
-        "tags": ["Comments"],
-        "summary": "Update a comment",
+      "post": {
+        "tags": ["Posts"],
+        "summary": "Like a post",
         "security": [{ "cookieAuth": [] }],
-        "responses": { "200": { "description": "Comment updated" } }
+        "responses": { "200": { "description": "Post liked" } }
+      },
+      "delete": {
+        "tags": ["Posts"],
+        "summary": "Unlike a post",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Post unliked" } }
+      }
+    },
+    "/comments/{id}/like": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "format": "uuid" }
+        }
+      ],
+      "post": {
+        "tags": ["Comments"],
+        "summary": "Like a comment",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "description": "Comment liked" } }
       },
       "delete": {
         "tags": ["Comments"],
-        "summary": "Delete a comment",
+        "summary": "Unlike a comment",
         "security": [{ "cookieAuth": [] }],
-        "responses": { "204": { "description": "Comment deleted" } }
+        "responses": { "200": { "description": "Comment unliked" } }
       }
     },
     "/chats": {
@@ -497,6 +637,7 @@
         "security": [{ "cookieAuth": [] }],
         "responses": {
           "200": {
+            "description": "List of chat rooms the user participates in",
             "content": {
               "application/json": {
                 "schema": {
