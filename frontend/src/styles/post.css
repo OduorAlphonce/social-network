@@ -18,6 +18,16 @@
   height: 80px;
 }
 
+.post-bio h5 {
+  margin: 0;
+}
+
+.post-bio {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 .post-body {
   display: flex;
   flex-direction: column;
