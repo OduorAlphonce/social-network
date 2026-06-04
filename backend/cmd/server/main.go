@@ -6,7 +6,9 @@ import (
 	"os"
 
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/handlers"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/middleware"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/routers"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/config"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/db"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/repositories"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
@@ -14,23 +16,10 @@ import (
 
 func main() {
 	// Configuration (using env variables or defaults)
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "./social_network.db"
-	}
+	config.Load()
 
-	migrationsDir := os.Getenv("MIGRATIONS_DIR")
-	if migrationsDir == "" {
-		migrationsDir = "./pkg/db/migrations/sqlite"
-	}
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Initializing database at %s...", dbPath)
-	database, err := db.InitDB(dbPath, migrationsDir)
+	log.Printf("Initializing database at %s...", config.App.DatabasePath)
+	database, err := db.InitDB(config.App.DatabasePath, config.App.MigrationsDir)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
@@ -64,7 +53,7 @@ func main() {
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
 
 	// Setup simple logging and CORS middleware
-	handler := corsMiddleware(mux)
+	handler := middleware.corsMiddleware(mux)
 
 	log.Printf("Server starting on port %s...", port)
 	if err := http.ListenAndServe(":"+port, handler); err != nil {
