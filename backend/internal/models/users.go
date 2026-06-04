@@ -12,10 +12,11 @@ type User struct {
 	PassHash       string    `db:"password_hash" json:"pass_hash"`
 	FirstName      string    `db:"first_name" json:"first_name"`
 	LastName       string    `db:"last_name" json:"last_name"`
-	DOB            time.Time `db:"dob" json: dob`
-	avatar         string    `db:"avatar" json:"avatar"`
+	DOB            time.Time `db:"dob" json:"dob"`
+	Avatar         string    `db:"avatar" json:"avatar"`
 	Nickname       string    `db:"nickname" json:"nickname"`
 	AboutMe        string    `db:"about_me" json:"about_me"`
+	IsPublic	   bool		 `db:"is_public" json:"is_public"`
 	FollowerCount  int       `db:"follower_count" json:"follower_count"`
 	FollowingCount int       `db:"following_count" json:"following_count"`
 	CreatedAt      time.Time `db:"created_at" json:"created_at"`
