@@ -8,22 +8,22 @@ import (
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
 )
 
-type sqliteUserRepository struct {
+type userRepository struct {
 	db *sql.DB
 }
 
 func NewUserRepository(db *sql.DB) UserRepository {
-	return &sqliteUserRepository{db: db}
+	return &userRepository{db: db}
 }
 
-func (r *sqliteUserRepository) CreateUser(u *models.User) error {
+func (ur *userRepository) CreateUser(u *models.User) error {
 	query := `INSERT INTO users (id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, follower_count, following_count, created_at) 
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err := r.db.Exec(query, u.ID, u.Email, u.PassHash, u.FirstName, u.LastName, u.DOB, u.Avatar, u.Nickname, u.AboutMe, u.IsPublic, u.FollowerCount, u.FollowingCount, u.CreatedAt)
 	return err
 }
 
-func (r *sqliteUserRepository) GetUserByID(id uuid.UUID) (*models.User, error) {
+func (ur *userRepository) GetUserByID(id uuid.UUID) (*models.User, error) {
 	query := `SELECT id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, follower_count, following_count, created_at FROM users WHERE id = ?`
 	u := &models.User{}
 	var avatar, nickname, aboutMe sql.NullString
@@ -40,7 +40,7 @@ func (r *sqliteUserRepository) GetUserByID(id uuid.UUID) (*models.User, error) {
 	return u, nil
 }
 
-func (r *sqliteUserRepository) GetUserByEmail(email string) (*models.User, error) {
+func (ur *userRepository) GetUserByEmail(email string) (*models.User, error) {
 	query := `SELECT id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, follower_count, following_count, created_at FROM users WHERE email = ?`
 	u := &models.User{}
 	var avatar, nickname, aboutMe sql.NullString
@@ -58,11 +58,17 @@ func (r *sqliteUserRepository) GetUserByEmail(email string) (*models.User, error
 }
 
 // UpdateUserProfile is a stub to satisfy the interface; @aloduor is implementing this.
-func (r *sqliteUserRepository) UpdateUserProfile(id uuid.UUID) (*models.User, error) {
+func (ur *userRepository) UpdateUserProfile(id uuid.UUID) (*models.User, error) {
 	return nil, errors.New("not implemented")
 }
 
 // DeleteUser is a stub to satisfy the interface; @fcharles is implementing this.
-func (r *sqliteUserRepository) DeleteUser(id uuid.UUID) error {
-	return errors.New("not implemented")
+func (ur *userRepository) DeleteUser(id uuid.UUID) error {
+	_, err := r.db.Exec(`
+		DELETE FROM users WHERE id = ?
+	`, id.String())
+	if err != nil {
+		return err
+	}
+	return nil
 }
