@@ -14,8 +14,9 @@
 .post-header > img {
   border-radius: 50%;
   border: 1px solid;
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
+  padding: 5px;
 }
 
 .post-bio h5 {
