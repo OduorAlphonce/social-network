@@ -40,6 +40,9 @@
   justify-content: center;
 }
 
-.reaction-active {
+.reaction-like {
+  color: blue;
+}
+.reaction-dislike {
   color: red;
 }
