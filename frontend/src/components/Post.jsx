@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "../styles/post.css";
 import { Dislike, Like } from "./Reactions";
+import avatar from "../assets/user.svg";
 
 const Post = () => {
   const [likePost, setLikePost] = useState(false);
@@ -19,7 +20,7 @@ const Post = () => {
   return (
     <div className="post-container">
       <div className="post-header">
-        <img src="" alt="avatar" />
+        <img src={avatar} alt="avatar" />
         <div className="post-bio">
           <h5>User Name</h5>
           <small>16:06</small>
