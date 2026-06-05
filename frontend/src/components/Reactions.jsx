@@ -1,11 +1,25 @@
-import { BiDislike, BiLike } from "react-icons/bi";
+import { BiSolidDislike, BiSolidLike } from "react-icons/bi";
 
-const Like = ({ like }) => {
-  return <BiLike id = "like" onClick={like} size={24} />;
+const Like = ({ like, isActive }) => {
+  return (
+    <BiSolidLike
+      id="like"
+      onClick={like}
+      size={24}
+      className={isActive ? "reaction-like" : ""}
+    />
+  );
 };
 
-const Dislike = ({ dislike }) => {
-  return <BiDislike id = "dislike" onClick={dislike} size={24}/>;
+const Dislike = ({ dislike, isActive }) => {
+  return (
+    <BiSolidDislike
+      id="dislike"
+      onClick={dislike}
+      size={24}
+      className={isActive ? "reaction-dislike" : ""}
+    />
+  );
 };
 
 export { Like, Dislike };
