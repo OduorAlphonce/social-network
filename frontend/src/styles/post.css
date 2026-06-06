@@ -42,7 +42,7 @@
   gap: 10px;
   justify-content: space-evenly;
   border-top: 1px solid;
-  padding: 15px 0px;
+  padding: 0px 0px;
   align-items: center;
 }
 
@@ -53,9 +53,32 @@
   min-width: 70px;
 }
 
+.reaction-count {
+  padding: 5px 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
 .reaction-like {
   color: blue;
 }
 .reaction-dislike {
   color: red;
+}
+
+#like:hover {
+  color: blue;
+}
+#dislike:hover {
+  color: red;
+}
+
+.links {
+  padding: 5px 10px;
+  border: 1px transparent;
+  border-radius: 5px;
+  min-width: 60px;
+}
+.links:hover {
+  background-color: rgba(92, 87, 87, 0.9);
 }
