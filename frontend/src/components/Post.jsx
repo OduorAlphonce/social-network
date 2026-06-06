@@ -40,10 +40,10 @@ const Post = () => {
           <Dislike dislike={dislike} isActive={dislikePost} />
         </div>
         <div>
-          <p>Comment</p>
+          <p className="links">Comment</p>
         </div>
         <div>
-          <p>Share</p>
+          <p className="links">Share</p>
         </div>
       </div>
     </div>
