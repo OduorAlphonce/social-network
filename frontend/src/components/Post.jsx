@@ -31,7 +31,9 @@ const Post = () => {
         <p>Post body</p>
       </div>
       <div className="reaction-count">
-        <div><Like/> 45</div>
+        <div className="center">
+          <Like /> 45
+        </div>
         <div>13 Comments</div>
       </div>
       <div className="post-footer">

@@ -57,6 +57,7 @@
   padding: 5px 10px;
   display: flex;
   justify-content: space-between;
+  margin-bottom: 5px;
 }
 
 .reaction-like {
@@ -81,4 +82,8 @@
 }
 .links:hover {
   background-color: rgba(92, 87, 87, 0.9);
+}
+.center {
+  display: flex;
+  gap: 5px;
 }
