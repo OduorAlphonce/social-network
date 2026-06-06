@@ -30,9 +30,18 @@ const Post = () => {
         <img src="" alt="post-image" />
         <p>Post body</p>
       </div>
+      <div className="reaction-count"></div>
       <div className="post-footer">
-        <Like like={like} isActive={likePost} />
-        <Dislike dislike={dislike} isActive={dislikePost} />
+        <div className="reaction-container">
+          <Like like={like} isActive={likePost} />
+          <Dislike dislike={dislike} isActive={dislikePost} />
+        </div>
+        <div>
+          <p>Comment</p>
+        </div>
+        <div>
+          <p>Share</p>
+        </div>
       </div>
     </div>
   );
