@@ -3,6 +3,8 @@
   flex-direction: column;
   width: 100%;
   padding: 10px;
+  border: 1px solid;
+  border-radius: 10px;
 }
 
 .post-header {
@@ -38,7 +40,17 @@
   display: flex;
   flex-direction: row;
   gap: 10px;
-  justify-content: center;
+  justify-content: space-evenly;
+  border-top: 1px solid;
+  padding: 15px 0px;
+  align-items: center;
+}
+
+.reaction-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  min-width: 70px;
 }
 
 .reaction-like {
