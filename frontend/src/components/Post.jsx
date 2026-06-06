@@ -30,7 +30,10 @@ const Post = () => {
         <img src="" alt="post-image" />
         <p>Post body</p>
       </div>
-      <div className="reaction-count"></div>
+      <div className="reaction-count">
+        <div><Like/> 45</div>
+        <div>13 Comments</div>
+      </div>
       <div className="post-footer">
         <div className="reaction-container">
           <Like like={like} isActive={likePost} />
