@@ -1,6 +1,6 @@
 import { MdOutlineEvent, MdOutlineGroup } from "react-icons/md";
 import { AiOutlineMessage } from "react-icons/ai";
-import { IoIosInformationCircleOutline } from "react-icons/io";
+import { IoIosNotificationsOutline } from "react-icons/io";
 import { BiGroup, BiHome, BiUser } from "react-icons/bi";
 
 const Sidebar = () => {
@@ -25,7 +25,7 @@ const Sidebar = () => {
         Messages
       </li>
       <li className="links">
-        <IoIosInformationCircleOutline />
+        <IoIosNotificationsOutline />
         Notification
       </li>
       <li className="links">
