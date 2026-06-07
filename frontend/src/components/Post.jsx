@@ -20,7 +20,7 @@ const Post = () => {
   return (
     <div className="post-container">
       <div className="post-header">
-        <img src={avatar} alt="avatar" />
+        <img src={avatar} alt="avatar" className="profile-photo" />
         <div className="post-bio">
           <h5>User Name</h5>
           <small>16:06</small>
