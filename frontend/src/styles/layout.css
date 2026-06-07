@@ -7,6 +7,7 @@
 
 .sidebar {
   max-width: 300px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -15,13 +16,19 @@
   align-items: flex-start;
 }
 
-.sidebar > li{
-    display: flex;
-    gap: 10px;
-    padding: 10px;
+.links {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  vertical-align: middle;
 }
 
-
+.links:hover {
+  background-color: rgba(247, 243, 243, 0.315);
+  width: 70%;
+  border-radius: 10px;
+  cursor: pointer;
+}
 
 .header {
   border: 1px solid;
