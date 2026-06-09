@@ -25,5 +25,7 @@
     height: 24px;
     width: 250px;
     padding: 1px 10px;
-    border: 1px transparent;
+    border: 1px solid black;
+    color: black;
+    background-color: transparent;
 }
