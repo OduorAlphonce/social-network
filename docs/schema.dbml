@@ -48,13 +48,16 @@ Table posts {
   group_id uuid [ref: > groups.id, null]
   content text [not null]
   image_url varchar
-  privacy varchar [not null, note: 'Allowed values: "public", "almost_private", "private"; DB-level CHECK constraint recommended: CHECK (privacy IN (\'public\', \'almost_private\', \'private\'))']
+  privacy varchar [not null, note: '"public", "almost_private", "private". Enforced in migration SQL with CHECK(privacy IN (\'public\', \'almost_private\', \'private\')).']
 
   // Counter Caches
   comment_count integer [default: 0]
   like_count integer [default: 0]
+  dislike_count integer [default: 0]
 
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [null, note: 'Set when the author edits the post. NULL means never edited.']
+  deleted_at timestamp [null, note: 'Soft-delete marker. Deleted posts are returned using the minimal DeletedPostDTO.']
 }
 
 Table post_audiences {
@@ -66,45 +69,58 @@ Table post_audiences {
   }
 }
 
-Table post_likes {
+Table post_votes {
   post_id uuid [ref: > posts.id]
   user_id uuid [ref: > users.id]
+  vote varchar [not null, note: '"like" or "dislike". Enforced in migration SQL with CHECK(vote IN (\'like\', \'dislike\')).']
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [null, note: 'Set when the user changes between like and dislike.']
 
   indexes {
     (post_id, user_id) [pk]
   }
 
-  Note: 'Tracks who liked a post to prevent duplicate likes and allow un-liking.'
+  Note: 'One row per user and post guarantees mutually exclusive like/dislike voting. Deleting the row removes the vote.'
 }
 
 Table comments {
   id uuid [pk]
   post_id uuid [ref: > posts.id, not null]
   user_id uuid [ref: > users.id, not null]
-  parent_comment_id uuid [ref: > comments.id, null, note: 'ON DELETE CASCADE — deleting a parent comment should remove its replies']
+  parent_comment_id uuid [null, note: 'Self-referencing FK. NULL = top-level comment. Deleted comments remain as tombstones so replies keep this reference.']
   content text [not null]
-  image_url varchar
+  image_url varchar [note: 'Relative path, e.g. /uploads/images/uuid.jpg. NULL if no attachment.']
+  deleted_at timestamp [null, note: 'Soft-delete marker. When set, clients render a deleted-content placeholder while preserving replies.']
 
   // Counter Caches
   like_count integer [default: 0]
+  dislike_count integer [default: 0]
 
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [null, note: 'Set when the author edits the comment. NULL means never edited.']
 
   indexes {
-    (post_id)
-    (parent_comment_id)
+    post_id [name: 'idx_comments_post_id', note: 'Critical: used on every GET /posts/{id}/comments query']
+    parent_comment_id [name: 'idx_comments_parent_comment_id', note: 'Critical: used when building the comment tree (parent → children lookup)']
   }
 }
 
-Table comment_likes {
+// Do not cascade comment deletion: comments are soft-deleted and retained as
+// tombstones so the reply tree remains intact.
+Ref: comments.parent_comment_id > comments.id
+
+Table comment_votes {
   comment_id uuid [ref: > comments.id]
   user_id uuid [ref: > users.id]
+  vote varchar [not null, note: '"like" or "dislike". Enforced in migration SQL with CHECK(vote IN (\'like\', \'dislike\')).']
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [null, note: 'Set when the user changes between like and dislike.']
 
   indexes {
     (comment_id, user_id) [pk]
   }
+
+  Note: 'One row per user and comment guarantees mutually exclusive like/dislike voting. Deleting the row removes the vote.'
 }
 
 Table groups {

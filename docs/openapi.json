@@ -12,15 +12,30 @@
     }
   ],
   "tags": [
-    { "name": "Auth", "description": "Authentication and session management" },
+    {
+      "name": "Auth",
+      "description": "Authentication and session management"
+    },
     {
       "name": "Users",
       "description": "Profile discovery, search, and follower graphs"
     },
-    { "name": "Posts", "description": "Timeline and group posts management" },
-    { "name": "Comments", "description": "Nested comment threads" },
-    { "name": "Chats", "description": "Direct messages and group chat rooms" },
-    { "name": "Groups", "description": "Group and event invitations" }
+    {
+      "name": "Posts",
+      "description": "Timeline and group posts management"
+    },
+    {
+      "name": "Comments",
+      "description": "Nested comment threads"
+    },
+    {
+      "name": "Chats",
+      "description": "Direct messages and group chat rooms"
+    },
+    {
+      "name": "Groups",
+      "description": "Group and event invitations"
+    }
   ],
   "components": {
     "securitySchemes": {
@@ -35,69 +50,258 @@
         "type": "object",
         "required": ["status", "message"],
         "properties": {
-          "status": { "type": "string", "enum": ["success", "error"] },
-          "message": { "type": "string" },
-          "data": { "description": "The response payload." }
+          "status": {
+            "type": "string",
+            "enum": ["success", "error"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "description": "The response payload."
+          }
         }
       },
       "PublicUser": {
         "type": "object",
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "first_name": { "type": "string" },
-          "last_name": { "type": "string" },
-          "nickname": { "type": ["string", "null"] },
-          "avatar_url": { "type": ["string", "null"] },
-          "follower_count": { "type": "integer" },
-          "following_count": { "type": "integer" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatar_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "follower_count": {
+            "type": "integer"
+          },
+          "following_count": {
+            "type": "integer"
+          }
         }
       },
       "PrivateUser": {
         "type": "object",
         "allOf": [
-          { "$ref": "#/components/schemas/PublicUser" },
+          {
+            "$ref": "#/components/schemas/PublicUser"
+          },
           {
             "type": "object",
             "properties": {
-              "email": { "type": "string", "format": "email" },
-              "dob": { "type": "string", "format": "date" }
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "dob": {
+                "type": "string",
+                "format": "date"
+              }
             }
           }
         ]
       },
       "Post": {
         "type": "object",
+        "required": [
+          "id",
+          "author",
+          "content",
+          "privacy",
+          "comment_count",
+          "like_count",
+          "dislike_count",
+          "viewer_vote",
+          "created_at",
+          "updated_at",
+          "deleted"
+        ],
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "author": { "$ref": "#/components/schemas/PublicUser" },
-          "content": { "type": "string" },
-          "image_url": { "type": ["string", "null"] },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "author": {
+            "$ref": "#/components/schemas/PublicUser"
+          },
+          "content": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": "string",
+            "nullable": true
+          },
           "privacy": {
             "type": "string",
-            "enum": ["public", "almost_private", "private"],
-            "description": "Privacy level. Server enforces allowed values. A DB CHECK constraint is recommended."
+            "enum": ["public", "almost_private", "private"]
           },
-          "comment_count": { "type": "integer" },
-          "like_count": { "type": "integer" },
-          "created_at": { "type": "string", "format": "date-time" }
+          "comment_count": {
+            "type": "integer"
+          },
+          "like_count": {
+            "type": "integer"
+          },
+          "dislike_count": {
+            "type": "integer"
+          },
+          "viewer_vote": {
+            "type": "string",
+            "enum": ["like", "dislike", "none"],
+            "description": "The authenticated user's current vote on this post."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When the author last edited the post. Null when it has never been edited."
+          },
+          "deleted": {
+            "type": "boolean",
+            "enum": [false]
+          }
         }
+      },
+      "DeletedPostDTO": {
+        "type": "object",
+        "description": "Minimal tombstone returned for a deleted post. Author, content, media, vote counts, privacy, and timestamps must not be included.",
+        "additionalProperties": false,
+        "required": ["id", "deleted"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted": {
+            "type": "boolean",
+            "enum": [true]
+          }
+        }
+      },
+      "PostDTO": {
+        "description": "An active post or its minimal deleted tombstone.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Post"
+          },
+          {
+            "$ref": "#/components/schemas/DeletedPostDTO"
+          }
+        ]
       },
       "Comment": {
         "type": "object",
+        "required": [
+          "id",
+          "post_id",
+          "author",
+          "content",
+          "like_count",
+          "dislike_count",
+          "viewer_vote",
+          "created_at",
+          "updated_at",
+          "replies",
+          "deleted"
+        ],
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "post_id": { "type": "string", "format": "uuid" },
-          "author": { "$ref": "#/components/schemas/PublicUser" },
-          "content": { "type": "string" },
-          "image_url": { "type": ["string", "null"] },
-          "like_count": { "type": "integer" },
-          "created_at": { "type": "string", "format": "date-time" },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "post_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "author": {
+            "$ref": "#/components/schemas/PublicUser"
+          },
+          "content": {
+            "type": "string"
+          },
+          "like_count": {
+            "type": "integer"
+          },
+          "dislike_count": {
+            "type": "integer"
+          },
+          "viewer_vote": {
+            "type": "string",
+            "enum": ["like", "dislike", "none"],
+            "description": "The authenticated user's current vote on this comment."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "When the author last edited the comment. Null when it has never been edited."
+          },
           "replies": {
             "type": "array",
             "description": "Immediate children of this comment. Forms a recursive tree.",
-            "items": { "$ref": "#/components/schemas/Comment" }
+            "items": {
+              "$ref": "#/components/schemas/CommentDTO"
+            }
+          },
+          "image_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional image or GIF stored as a relative path, e.g. /uploads/images/uuid.jpg"
+          },
+          "deleted": {
+            "type": "boolean",
+            "enum": [false]
           }
         }
+      },
+      "DeletedCommentDTO": {
+        "type": "object",
+        "description": "Minimal tombstone returned for a deleted comment. Author, content, media, vote counts, and timestamps must not be included. Replies remain so the thread structure is preserved.",
+        "additionalProperties": false,
+        "required": ["id", "deleted", "replies"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "replies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommentDTO"
+            }
+          }
+        }
+      },
+      "CommentDTO": {
+        "description": "An active comment or its minimal deleted tombstone.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Comment"
+          },
+          {
+            "$ref": "#/components/schemas/DeletedCommentDTO"
+          }
+        ]
       },
       "ChatRoom": {
         "type": "object",
@@ -107,13 +311,51 @@
             "format": "uuid",
             "description": "Group ID or a generated DM Thread ID"
           },
-          "type": { "type": "string", "enum": ["dm", "group"] },
+          "type": {
+            "type": "string",
+            "enum": ["dm", "group"]
+          },
           "name": {
             "type": "string",
             "description": "Group title or the other user's name"
           },
-          "last_message": { "type": "string" },
-          "updated_at": { "type": "string", "format": "date-time" }
+          "last_message": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "VoteRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["vote"],
+        "properties": {
+          "vote": {
+            "type": "string",
+            "enum": ["like", "dislike"]
+          }
+        }
+      },
+      "VoteResponse": {
+        "type": "object",
+        "required": ["like_count", "dislike_count", "viewer_vote"],
+        "properties": {
+          "like_count": {
+            "type": "integer",
+            "description": "The updated like count after the operation."
+          },
+          "dislike_count": {
+            "type": "integer",
+            "description": "The updated dislike count after the operation."
+          },
+          "viewer_vote": {
+            "type": "string",
+            "enum": ["like", "dislike", "none"],
+            "description": "The authenticated user's vote after the operation."
+          }
         }
       }
     }
@@ -137,14 +379,33 @@
                   "dob"
                 ],
                 "properties": {
-                  "email": { "type": "string", "format": "email" },
-                  "password": { "type": "string", "minLength": 8 },
-                  "first_name": { "type": "string" },
-                  "last_name": { "type": "string" },
-                  "dob": { "type": "string", "format": "date" },
-                  "avatar_url": { "type": "string" },
-                  "nickname": { "type": "string" },
-                  "about_me": { "type": "string" }
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8
+                  },
+                  "first_name": {
+                    "type": "string"
+                  },
+                  "last_name": {
+                    "type": "string"
+                  },
+                  "dob": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "avatar_url": {
+                    "type": "string"
+                  },
+                  "nickname": {
+                    "type": "string"
+                  },
+                  "about_me": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -157,11 +418,15 @@
               "application/json": {
                 "schema": {
                   "allOf": [
-                    { "$ref": "#/components/schemas/Response" },
+                    {
+                      "$ref": "#/components/schemas/Response"
+                    },
                     {
                       "type": "object",
                       "properties": {
-                        "data": { "$ref": "#/components/schemas/PublicUser" }
+                        "data": {
+                          "$ref": "#/components/schemas/PublicUser"
+                        }
                       }
                     }
                   ]
@@ -184,8 +449,13 @@
                 "type": "object",
                 "required": ["email", "password"],
                 "properties": {
-                  "email": { "type": "string", "format": "email" },
-                  "password": { "type": "string" }
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -196,7 +466,9 @@
             "description": "Login successful. Sets HttpOnly session cookie.",
             "headers": {
               "Set-Cookie": {
-                "schema": { "type": "string" },
+                "schema": {
+                  "type": "string"
+                },
                 "description": "session_token=<uuid>; Path=/; HttpOnly"
               }
             },
@@ -204,11 +476,15 @@
               "application/json": {
                 "schema": {
                   "allOf": [
-                    { "$ref": "#/components/schemas/Response" },
+                    {
+                      "$ref": "#/components/schemas/Response"
+                    },
                     {
                       "type": "object",
                       "properties": {
-                        "data": { "$ref": "#/components/schemas/PrivateUser" }
+                        "data": {
+                          "$ref": "#/components/schemas/PrivateUser"
+                        }
                       }
                     }
                   ]
@@ -223,9 +499,15 @@
       "post": {
         "tags": ["Auth"],
         "summary": "Logout the current user",
-        "security": [{ "cookieAuth": [] }],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "Logged out successfully. Cookie cleared." }
+          "200": {
+            "description": "Logged out successfully. Cookie cleared."
+          }
         }
       }
     },
@@ -239,7 +521,9 @@
             "in": "query",
             "description": "Search by name, nickname, or email",
             "required": false,
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -252,7 +536,9 @@
                   "properties": {
                     "data": {
                       "type": "array",
-                      "items": { "$ref": "#/components/schemas/PublicUser" }
+                      "items": {
+                        "$ref": "#/components/schemas/PublicUser"
+                      }
                     }
                   }
                 }
@@ -266,17 +552,29 @@
       "patch": {
         "tags": ["Users"],
         "summary": "Update authenticated user's profile",
-        "security": [{ "cookieAuth": [] }],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "Profile updated" }
+          "200": {
+            "description": "Profile updated"
+          }
         }
       },
       "delete": {
         "tags": ["Users"],
         "summary": "Delete authenticated user's account",
-        "security": [{ "cookieAuth": [] }],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
-          "204": { "description": "Account deleted" }
+          "204": {
+            "description": "Account deleted"
+          }
         }
       }
     },
@@ -284,7 +582,11 @@
       "get": {
         "tags": ["Users", "Comments"],
         "summary": "Get all comments made by the authenticated user",
-        "security": [{ "cookieAuth": [] }],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of the user's comments",
@@ -295,7 +597,9 @@
                   "properties": {
                     "data": {
                       "type": "array",
-                      "items": { "$ref": "#/components/schemas/Comment" }
+                      "items": {
+                        "$ref": "#/components/schemas/CommentDTO"
+                      }
                     }
                   }
                 }
@@ -311,14 +615,19 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string", "format": "uuid" }
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       ],
       "get": {
         "tags": ["Users"],
         "summary": "Get a user's followers",
         "responses": {
-          "200": { "description": "Array of PublicUsers" }
+          "200": {
+            "description": "Array of PublicUsers"
+          }
         }
       }
     },
@@ -328,14 +637,19 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string", "format": "uuid" }
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       ],
       "get": {
         "tags": ["Users"],
         "summary": "Get users followed by this user",
         "responses": {
-          "200": { "description": "Array of PublicUsers" }
+          "200": {
+            "description": "Array of PublicUsers"
+          }
         }
       }
     },
@@ -345,14 +659,34 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string", "format": "uuid" }
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       ],
       "get": {
         "tags": ["Users", "Posts"],
         "summary": "Get all posts made by a specific user",
         "responses": {
-          "200": { "description": "Array of Posts" }
+          "200": {
+            "description": "Active posts and minimal deleted-post tombstones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PostDTO"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -362,44 +696,48 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string", "format": "uuid" }
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       ],
       "post": {
         "tags": ["Users"],
         "summary": "Follow a user",
-        "security": [{ "cookieAuth": [] }],
-        "responses": { "200": { "description": "Followed or request pending" } }
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Followed or request pending"
+          }
+        }
       },
       "delete": {
         "tags": ["Users"],
         "summary": "Unfollow a user or cancel follow request",
-        "security": [{ "cookieAuth": [] }],
-        "responses": { "200": { "description": "Successfully unfollowed" } }
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully unfollowed"
+          }
+        }
       }
     },
     "/posts": {
       "get": {
         "tags": ["Posts"],
         "summary": "Get all posts (Timeline Feed)",
-        "security": [{ "cookieAuth": [] }],
-        "parameters": [
+        "security": [
           {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 20,
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": { "type": "integer", "default": 0, "minimum": 0 }
+            "cookieAuth": []
           }
         ],
         "responses": {
@@ -412,41 +750,104 @@
                   "properties": {
                     "data": {
                       "type": "array",
-                      "items": { "$ref": "#/components/schemas/Post" }
+                      "items": {
+                        "$ref": "#/components/schemas/PostDTO"
+                      }
                     }
                   }
                 }
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of posts to return (max 50)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of posts to skip for pagination",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          }
+        ]
       },
       "post": {
         "tags": ["Posts"],
         "summary": "Create a post",
-        "security": [{ "cookieAuth": [] }],
+        "description": "Creates a post owned by the authenticated user. Only that author may edit or delete it later.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Post created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post"
+                }
+              }
+            }
+          }
+        },
         "requestBody": {
           "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "required": ["content"],
+                "required": ["content", "privacy"],
                 "properties": {
-                  "content": { "type": "string" },
+                  "content": {
+                    "type": "string",
+                    "description": "Text body of the post"
+                  },
                   "privacy": {
                     "type": "string",
                     "enum": ["public", "almost_private", "private"],
-                    "default": "public"
+                    "description": "Visibility level: public (everyone), almost_private (followers only), private (selected users)"
                   },
-                  "image": { "type": "string", "format": "binary" },
-                  "group_id": { "type": "string", "format": "uuid" }
+                  "group_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "If set, the post is scoped to this group"
+                  },
+                  "audience_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "Required when privacy is 'private'. UUIDs of users allowed to see the post."
+                  },
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Optional image or GIF attachment. Accepted: JPEG, PNG, GIF. Max: 5 MB."
+                  }
                 }
               }
             }
           }
-        },
-        "responses": { "201": { "description": "Post created" } }
+        }
       }
     },
     "/posts/{id}": {
@@ -455,60 +856,134 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string", "format": "uuid" }
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       ],
-      "get": {
+      "patch": {
         "tags": ["Posts"],
-        "summary": "Get a single post by ID",
-        "description": "Retrieve the full detail of a single post for permalink or detail views.",
-        "security": [{ "cookieAuth": [] }],
+        "summary": "Update a post",
+        "description": "Only the post author may edit an active post. A successful edit sets `updated_at` to the current time.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Post detail",
+            "description": "Post updated",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": { "$ref": "#/components/schemas/Post" }
-                  }
+                  "$ref": "#/components/schemas/Post"
                 }
               }
             }
           },
-          "404": { "description": "Post not found" }
-        }
-      },
-      "patch": {
-        "tags": ["Posts"],
-        "summary": "Update a post",
-        "security": [{ "cookieAuth": [] }],
+          "403": {
+            "description": "The authenticated user is not the post author"
+          },
+          "404": {
+            "description": "Post not found"
+          },
+          "409": {
+            "description": "Deleted posts cannot be edited"
+          }
+        },
         "requestBody": {
-          "required": false,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "type": "object",
+                "description": "All fields are optional; only provided fields are updated.",
                 "properties": {
-                  "content": { "type": "string" },
+                  "content": {
+                    "type": "string"
+                  },
                   "privacy": {
                     "type": "string",
                     "enum": ["public", "almost_private", "private"]
                   },
-                  "image_url": { "type": ["string", "null"] }
+                  "audience_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "Replaces the entire audience list. Required if changing privacy to 'private'."
+                  },
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Replacement image. If provided, the old image is deleted from disk."
+                  }
                 }
               }
             }
           }
-        },
-        "responses": { "200": { "description": "Post updated" } }
+        }
       },
       "delete": {
         "tags": ["Posts"],
         "summary": "Delete a post",
-        "security": [{ "cookieAuth": [] }],
-        "responses": { "204": { "description": "Post deleted" } }
+        "description": "Only the post author may delete it. Deletion is idempotent and soft-deletes the post; subsequent representations use DeletedPostDTO.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Post deleted"
+          },
+          "403": {
+            "description": "The authenticated user is not the post author"
+          },
+          "404": {
+            "description": "Post not found"
+          }
+        }
+      },
+      "get": {
+        "tags": ["Posts"],
+        "summary": "Get a single post by ID",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accessible active post or minimal deleted-post tombstone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Response"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PostDTO"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Post exists but the current user cannot view it (privacy restriction)"
+          },
+          "404": {
+            "description": "Post not found"
+          }
+        }
       }
     },
     "/posts/{id}/comments": {
@@ -517,24 +992,10 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string", "format": "uuid" }
-        },
-        {
-          "name": "limit",
-          "in": "query",
-          "required": false,
           "schema": {
-            "type": "integer",
-            "default": 20,
-            "minimum": 1,
-            "maximum": 200
+            "type": "string",
+            "format": "uuid"
           }
-        },
-        {
-          "name": "offset",
-          "in": "query",
-          "required": false,
-          "schema": { "type": "integer", "default": 0, "minimum": 0 }
         }
       ],
       "get": {
@@ -542,7 +1003,7 @@
         "summary": "Get all top-level comments (with nested replies)",
         "responses": {
           "200": {
-            "description": "A tree structure of top-level comments (each may include nested replies)",
+            "description": "A tree of active comments and minimal deleted-comment tombstones",
             "content": {
               "application/json": {
                 "schema": {
@@ -550,19 +1011,63 @@
                   "properties": {
                     "data": {
                       "type": "array",
-                      "items": { "$ref": "#/components/schemas/Comment" }
+                      "items": {
+                        "$ref": "#/components/schemas/CommentDTO"
+                      }
                     }
                   }
                 }
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Max number of top-level comments to return (max 100). Nested replies are always returned in full.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of top-level comments to skip",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          }
+        ]
       },
       "post": {
         "tags": ["Comments"],
         "summary": "Add a comment",
-        "security": [{ "cookieAuth": [] }],
+        "description": "Creates a comment owned by the authenticated user. Only that author may edit it later.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Comment added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              }
+            }
+          }
+        },
         "requestBody": {
           "required": true,
           "content": {
@@ -571,62 +1076,112 @@
                 "type": "object",
                 "required": ["content"],
                 "properties": {
-                  "content": { "type": "string" },
-                  "parent_comment_id": {
-                    "type": ["string", "null"],
-                    "format": "uuid"
+                  "content": {
+                    "type": "string",
+                    "description": "Text body of the comment"
                   },
-                  "image": { "type": "string", "format": "binary" }
+                  "parent_comment_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "If provided, this is a reply to that comment. The parent must belong to the same post \u2014 cross-post injection is rejected with 400."
+                  },
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "nullable": true,
+                    "description": "Optional image or GIF attachment. Accepted: JPEG, PNG, GIF. Max: 5 MB."
+                  }
                 }
               }
             }
           }
+        }
+      }
+    },
+    "/comments/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "patch": {
+        "tags": ["Comments"],
+        "summary": "Update a comment",
+        "description": "Only the comment author may edit an active comment. A successful edit sets `updated_at` to the current time.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The authenticated user is not the comment author"
+          },
+          "404": {
+            "description": "Comment not found"
+          },
+          "409": {
+            "description": "Deleted comments cannot be edited"
+          }
         },
-        "responses": { "201": { "description": "Comment added" } }
-      }
-    },
-    "/posts/{id}/like": {
-      "parameters": [
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "schema": { "type": "string", "format": "uuid" }
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "description": "All fields optional; only provided fields are updated.",
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Replacement image. If provided, the old image is deleted from disk."
+                  }
+                }
+              }
+            }
+          }
         }
-      ],
-      "post": {
-        "tags": ["Posts"],
-        "summary": "Like a post",
-        "security": [{ "cookieAuth": [] }],
-        "responses": { "200": { "description": "Post liked" } }
-      },
-      "delete": {
-        "tags": ["Posts"],
-        "summary": "Unlike a post",
-        "security": [{ "cookieAuth": [] }],
-        "responses": { "200": { "description": "Post unliked" } }
-      }
-    },
-    "/comments/{id}/like": {
-      "parameters": [
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "schema": { "type": "string", "format": "uuid" }
-        }
-      ],
-      "post": {
-        "tags": ["Comments"],
-        "summary": "Like a comment",
-        "security": [{ "cookieAuth": [] }],
-        "responses": { "200": { "description": "Comment liked" } }
       },
       "delete": {
         "tags": ["Comments"],
-        "summary": "Unlike a comment",
-        "security": [{ "cookieAuth": [] }],
-        "responses": { "200": { "description": "Comment unliked" } }
+        "summary": "Delete a comment",
+        "description": "The comment author or parent post author may delete it. Deletion is idempotent and replaces the response representation with DeletedCommentDTO while preserving replies.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Comment deleted"
+          },
+          "403": {
+            "description": "The authenticated user is neither the comment author nor the parent post author"
+          },
+          "404": {
+            "description": "Comment not found"
+          }
+        }
       }
     },
     "/chats": {
@@ -634,10 +1189,13 @@
         "tags": ["Chats"],
         "summary": "Get all active chat rooms",
         "description": "Returns a list of all DMs and Group chats the user is part of, sorted by recent activity.",
-        "security": [{ "cookieAuth": [] }],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "responses": {
           "200": {
-            "description": "List of chat rooms the user participates in",
             "content": {
               "application/json": {
                 "schema": {
@@ -645,7 +1203,9 @@
                   "properties": {
                     "data": {
                       "type": "array",
-                      "items": { "$ref": "#/components/schemas/ChatRoom" }
+                      "items": {
+                        "$ref": "#/components/schemas/ChatRoom"
+                      }
                     }
                   }
                 }
@@ -660,7 +1220,11 @@
         "tags": ["Chats"],
         "summary": "Open a direct message with a user",
         "description": "Creates or retrieves an existing DM thread with the target user.",
-        "security": [{ "cookieAuth": [] }],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -669,14 +1233,19 @@
                 "type": "object",
                 "required": ["target_user_id"],
                 "properties": {
-                  "target_user_id": { "type": "string", "format": "uuid" }
+                  "target_user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "DM room opened" }
+          "200": {
+            "description": "DM room opened"
+          }
         }
       }
     },
@@ -686,13 +1255,20 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string", "format": "uuid" }
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       ],
       "post": {
         "tags": ["Groups"],
         "summary": "Invite a user to a group",
-        "security": [{ "cookieAuth": [] }],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -700,13 +1276,20 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "user_id": { "type": "string", "format": "uuid" }
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
                 }
               }
             }
           }
         },
-        "responses": { "200": { "description": "Invitation sent" } }
+        "responses": {
+          "200": {
+            "description": "Invitation sent"
+          }
+        }
       }
     },
     "/events/{id}/invite": {
@@ -715,14 +1298,183 @@
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string", "format": "uuid" }
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       ],
       "post": {
         "tags": ["Groups"],
         "summary": "Invite a user to an event",
-        "security": [{ "cookieAuth": [] }],
-        "responses": { "200": { "description": "Invitation sent" } }
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitation sent"
+          }
+        }
+      }
+    },
+    "/posts/{id}/vote": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "put": {
+        "tags": ["Posts"],
+        "summary": "Set or change the current user's vote on a post",
+        "description": "Creates or replaces the authenticated user's single vote. Setting the existing value is idempotent; changing from like to dislike or vice versa updates both counters atomically. Deleted posts cannot be voted on.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vote set or changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoteResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found"
+          },
+          "409": {
+            "description": "Deleted posts cannot be voted on"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Posts"],
+        "summary": "Remove the current user's vote from a post",
+        "description": "Removes either a like or dislike. Removing a vote when none exists is idempotent.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vote removed or no vote existed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoteResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found"
+          },
+          "409": {
+            "description": "Deleted posts cannot be voted on"
+          }
+        }
+      }
+    },
+    "/comments/{id}/vote": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "put": {
+        "tags": ["Comments"],
+        "summary": "Set or change the current user's vote on a comment",
+        "description": "Creates or replaces the authenticated user's single vote. Setting the existing value is idempotent; changing from like to dislike or vice versa updates both counters atomically. Deleted comments cannot be voted on.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vote set or changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoteResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Comment not found"
+          },
+          "409": {
+            "description": "Deleted comments cannot be voted on"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Comments"],
+        "summary": "Remove the current user's vote from a comment",
+        "description": "Removes either a like or dislike. Removing a vote when none exists is idempotent.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vote removed or no vote existed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoteResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Comment not found"
+          },
+          "409": {
+            "description": "Deleted comments cannot be voted on"
+          }
+        }
       }
     }
   }
