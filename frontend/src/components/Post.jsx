@@ -1,7 +1,7 @@
-import { useState } from "react";
-import "../styles/post.css";
-import { Dislike, Like } from "./Reactions";
-import avatar from "../assets/user.svg";
+import { useState } from 'react';
+import '../styles/post.css';
+import { Dislike, Like } from './Reactions';
+import avatar from '../assets/user.svg';
 
 const Post = () => {
   const [likePost, setLikePost] = useState(false);

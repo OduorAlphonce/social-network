@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  padding: 0px 20px
+  padding: 0px 20px;
 }
 
 .profile-photo {
@@ -13,19 +13,20 @@
   padding: 5px;
 }
 
-.pretitle, .icons {
+.pretitle,
+.icons {
   display: flex;
   flex-direction: row;
   gap: 10px;
   align-items: center;
 }
 
-.search{
-    border-radius: 20px;
-    height: 24px;
-    width: 250px;
-    padding: 1px 10px;
-    border: 1px solid black;
-    color: black;
-    background-color: transparent;
+.search {
+  border-radius: 20px;
+  height: 24px;
+  width: 250px;
+  padding: 1px 10px;
+  border: 1px solid black;
+  color: black;
+  background-color: transparent;
 }
