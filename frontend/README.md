@@ -2,7 +2,8 @@
 
 The frontend is a React 19 application built with Vite, React Router,
 React Icons and plain JavaScript/JSX.
-See [`../docs/openapi.json`](../docs/openapi.json) for request and response shapes.
+See [`../docs/api/openapi.json`](../docs/api/openapi.json) for planned request
+and response shapes.
 
 ## Commands
 
@@ -13,11 +14,14 @@ npm run lint
 npm run build
 ```
 
-The app runs at `http://localhost:5173` during development and calls the backend at `http://localhost:8080/api`. Requests to protected routes must include credentials so the `session_token` cookie is sent.
+The app runs at `http://localhost:5173` during development. The current pages
+are primarily a UI scaffold; as API integration is added, requests should call
+`http://localhost:8080/api`. Protected requests must include credentials so the
+`session_token` cookie is sent.
 
 ## Conventions
 
-- Keep API field names aligned with `../docs/openapi.json`.
+- Keep API field names aligned with `../docs/api/openapi.json`.
 - Use ordinary JavaScript objects for post and comment DTOs.
   JSDoc may be used where it improves editor support.
 
