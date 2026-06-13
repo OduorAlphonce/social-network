@@ -51,20 +51,81 @@
     },
     "schemas": {
       "Response": {
+        "description": "Standard API response envelope. Successful responses contain a payload in `data` and no field errors. Error responses contain no payload and may provide field-specific messages in `errors`.",
         "type": "object",
-        "required": ["status", "message"],
+        "required": ["status", "message", "data", "errors"],
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["success", "error"]
+            "enum": ["success", "error"],
+            "description": "Whether the request succeeded or failed."
           },
           "message": {
-            "type": "string"
+            "type": "string",
+            "description": "A human-readable summary of the result."
           },
           "data": {
-            "description": "The response payload."
+            "description": "The response payload. Error responses use null, an empty object, or an empty array."
+          },
+          "errors": {
+            "description": "Field-specific validation messages. Successful responses use null or an empty object.",
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
-        }
+        },
+        "oneOf": [
+          {
+            "title": "Success response",
+            "properties": {
+              "status": {
+                "const": "success"
+              },
+              "errors": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "maxProperties": 0
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "title": "Error response",
+            "properties": {
+              "status": {
+                "const": "error"
+              },
+              "data": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "maxProperties": 0
+                  },
+                  {
+                    "type": "array",
+                    "maxItems": 0
+                  }
+                ]
+              }
+            }
+          }
+        ]
       },
       "PrivateUser": {
         "type": "object",
@@ -85,7 +146,8 @@
               }
             }
           }
-        ]
+        ],
+        "description": "User details that are visible only to the authenticated owner."
       },
       "ChatRoom": {
         "type": "object",
@@ -93,24 +155,28 @@
           "id": {
             "type": "string",
             "format": "uuid",
-            "description": "Group ID or a generated DM Thread ID"
+            "description": "The group ID or generated direct-message thread ID."
           },
           "type": {
             "type": "string",
-            "enum": ["dm", "group"]
+            "enum": ["dm", "group"],
+            "description": "The kind of conversation."
           },
           "name": {
             "type": "string",
-            "description": "Group title or the other user's name"
+            "description": "The group title or the other participant's display name."
           },
           "last_message": {
-            "type": "string"
+            "type": "string",
+            "description": "A preview of the most recent message."
           },
           "updated_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "When the conversation last received activity."
           }
-        }
+        },
+        "description": "A direct-message or group conversation visible to the current user."
       },
       "VoteRequest": {
         "type": "object",
@@ -119,29 +185,11 @@
         "properties": {
           "vote": {
             "type": "string",
-            "enum": ["like", "dislike"]
+            "enum": ["like", "dislike"],
+            "description": "The desired vote value."
           }
-        }
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["status", "message"],
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "error"
-          },
-          "message": {
-            "type": "string"
-          },
-          "errors": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          }
-        }
+        },
+        "description": "The vote the current user wants to set on a post or comment."
       },
       "PublicUser": {
         "type": "object",
@@ -149,21 +197,27 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "The user's unique identifier."
           },
           "first_name": {
-            "type": "string"
+            "type": "string",
+            "description": "The user's first name."
           },
           "last_name": {
-            "type": "string"
+            "type": "string",
+            "description": "The user's last name."
           },
           "nickname": {
-            "type": ["string", "null"]
+            "type": ["string", "null"],
+            "description": "The user's optional nickname."
           },
           "avatar": {
-            "type": ["string", "null"]
+            "type": ["string", "null"],
+            "description": "URL of the user's avatar, or null when none is set."
           }
-        }
+        },
+        "description": "The public identity fields used when embedding a user in another resource."
       },
       "CurrentUser": {
         "allOf": [
@@ -190,11 +244,13 @@
               }
             }
           }
-        ]
+        ],
+        "description": "The authenticated user's public identity and private profile fields."
       },
       "ViewerVote": {
         "type": "string",
-        "enum": ["like", "dislike", "none"]
+        "enum": ["like", "dislike", "none"],
+        "description": "The current user's vote on the resource, or `none` when no vote exists."
       },
       "Post": {
         "type": "object",
@@ -217,24 +273,30 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "The post's unique identifier."
           },
           "deleted": {
             "type": "boolean",
-            "const": false
+            "const": false,
+            "description": "Always false for an active post."
           },
           "author": {
-            "$ref": "#/components/schemas/PublicUser"
+            "$ref": "#/components/schemas/PublicUser",
+            "description": "The user who created the post."
           },
           "group_id": {
             "type": ["string", "null"],
-            "format": "uuid"
+            "format": "uuid",
+            "description": "The owning group, or null for a profile or home-feed post."
           },
           "content": {
-            "type": "string"
+            "type": "string",
+            "description": "The post's text content."
           },
           "image_url": {
-            "type": ["string", "null"]
+            "type": ["string", "null"],
+            "description": "URL of the attached image or GIF, or null when absent."
           },
           "privacy": {
             "type": "string",
@@ -243,28 +305,35 @@
           },
           "comment_count": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Number of non-deleted comments visible in the thread."
           },
           "like_count": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Number of current like votes."
           },
           "dislike_count": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Number of current dislike votes."
           },
           "viewer_vote": {
-            "$ref": "#/components/schemas/ViewerVote"
+            "$ref": "#/components/schemas/ViewerVote",
+            "description": "The current user's vote on this post."
           },
           "created_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "When the post was created."
           },
           "updated_at": {
             "type": ["string", "null"],
-            "format": "date-time"
+            "format": "date-time",
+            "description": "When the post was last edited, or null when never edited."
           }
-        }
+        },
+        "description": "A visible, active post with author, audience, media, counts, and viewer state."
       },
       "DeletedPost": {
         "type": "object",
@@ -273,23 +342,16 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "The deleted post's unique identifier."
           },
           "deleted": {
             "type": "boolean",
-            "const": true
+            "const": true,
+            "description": "Always true for a deleted-post tombstone."
           }
-        }
-      },
-      "PostDTO": {
-        "oneOf": [
-          {
-            "$ref": "#/components/schemas/Post"
-          },
-          {
-            "$ref": "#/components/schemas/DeletedPost"
-          }
-        ]
+        },
+        "description": "The minimal tombstone returned in place of a soft-deleted post."
       },
       "Comment": {
         "type": "object",
@@ -312,55 +374,76 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "The comment's unique identifier."
           },
           "deleted": {
             "type": "boolean",
-            "const": false
+            "const": false,
+            "description": "Always false for an active comment."
           },
           "post_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "The post containing this comment."
           },
           "parent_comment_id": {
             "type": ["string", "null"],
-            "format": "uuid"
+            "format": "uuid",
+            "description": "The parent comment, or null for a top-level comment."
           },
           "author": {
-            "$ref": "#/components/schemas/PublicUser"
+            "$ref": "#/components/schemas/PublicUser",
+            "description": "The user who created the comment."
           },
           "content": {
-            "type": "string"
+            "type": "string",
+            "description": "The comment's text content."
           },
           "image_url": {
-            "type": ["string", "null"]
+            "type": ["string", "null"],
+            "description": "URL of the attached image or GIF, or null when absent."
           },
           "like_count": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Number of current like votes."
           },
           "dislike_count": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Number of current dislike votes."
           },
           "viewer_vote": {
-            "$ref": "#/components/schemas/ViewerVote"
+            "$ref": "#/components/schemas/ViewerVote",
+            "description": "The current user's vote on this comment."
           },
           "created_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "When the comment was created."
           },
           "updated_at": {
             "type": ["string", "null"],
-            "format": "date-time"
+            "format": "date-time",
+            "description": "When the comment was last edited, or null when never edited."
           },
           "replies": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/CommentDTO"
-            }
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Comment"
+                },
+                {
+                  "$ref": "#/components/schemas/DeletedComment"
+                }
+              ]
+            },
+            "description": "Visible direct replies, recursively including their descendants."
           }
-        }
+        },
+        "description": "A visible, active comment with recursively nested replies."
       },
       "DeletedComment": {
         "type": "object",
@@ -369,29 +452,30 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "The deleted comment's unique identifier."
           },
           "deleted": {
             "type": "boolean",
-            "const": true
+            "const": true,
+            "description": "Always true for a deleted-comment tombstone."
           },
           "replies": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/CommentDTO"
-            }
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Comment"
+                },
+                {
+                  "$ref": "#/components/schemas/DeletedComment"
+                }
+              ]
+            },
+            "description": "Visible replies retained beneath the tombstone."
           }
-        }
-      },
-      "CommentDTO": {
-        "oneOf": [
-          {
-            "$ref": "#/components/schemas/Comment"
-          },
-          {
-            "$ref": "#/components/schemas/DeletedComment"
-          }
-        ]
+        },
+        "description": "A minimal comment tombstone that preserves any visible descendants."
       },
       "VoteResponse": {
         "type": "object",
@@ -400,84 +484,154 @@
         "properties": {
           "like_count": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Updated number of like votes."
           },
           "dislike_count": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Updated number of dislike votes."
           },
           "viewer_vote": {
-            "$ref": "#/components/schemas/ViewerVote"
+            "$ref": "#/components/schemas/ViewerVote",
+            "description": "The current user's resulting vote."
           }
-        }
+        },
+        "description": "Updated vote totals and the current user's resulting vote."
       },
       "PostResponse": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["status", "data"],
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "success"
+        "description": "A successful response containing an active post or a deleted-post tombstone.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Response"
           },
-          "data": {
-            "$ref": "#/components/schemas/PostDTO"
+          {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "success",
+                "description": "Indicates that the request completed successfully."
+              },
+              "data": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Post"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DeletedPost"
+                  }
+                ],
+                "description": "The visible post representation."
+              }
+            }
           }
-        }
+        ]
       },
       "CommentResponse": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["status", "data"],
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "success"
+        "description": "A successful response containing an active comment or a deleted-comment tombstone.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Response"
           },
-          "data": {
-            "$ref": "#/components/schemas/CommentDTO"
+          {
+            "type": "object",
+            "required": ["data"],
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "success",
+                "description": "Indicates that the request completed successfully."
+              },
+              "data": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Comment"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DeletedComment"
+                  }
+                ],
+                "description": "The visible comment representation."
+              }
+            }
           }
-        }
+        ]
       },
       "PostListResponse": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["status", "data", "pagination"],
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "success"
+        "description": "A paginated collection of visible posts and deleted-post tombstones.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Response"
           },
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PostDTO"
+          {
+            "type": "object",
+            "required": ["data", "pagination"],
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "success",
+                "description": "Indicates that the request completed successfully."
+              },
+              "data": {
+                "type": "array",
+                "description": "Posts in feed order.",
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Post"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DeletedPost"
+                    }
+                  ]
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination",
+                "description": "Pagination state for this page of results."
+              }
             }
-          },
-          "pagination": {
-            "$ref": "#/components/schemas/Pagination"
           }
-        }
+        ]
       },
       "CommentListResponse": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["status", "data", "pagination"],
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "success"
+        "description": "A paginated collection of top-level comments, each containing its nested replies.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Response"
           },
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CommentDTO"
+          {
+            "type": "object",
+            "required": ["data", "pagination"],
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "success",
+                "description": "Indicates that the request completed successfully."
+              },
+              "data": {
+                "type": "array",
+                "description": "Top-level comments in thread order.",
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Comment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DeletedComment"
+                    }
+                  ]
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination",
+                "description": "Pagination state for this page of results."
+              }
             }
-          },
-          "pagination": {
-            "$ref": "#/components/schemas/Pagination"
           }
-        }
+        ]
       },
       "Pagination": {
         "type": "object",
@@ -486,16 +640,20 @@
         "properties": {
           "limit": {
             "type": "integer",
-            "minimum": 1
+            "minimum": 1,
+            "description": "Maximum number of top-level resources requested."
           },
           "offset": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Number of top-level resources skipped."
           },
           "has_more": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether another page is available."
           }
-        }
+        },
+        "description": "Offset-based pagination metadata for a collection response."
       }
     },
     "parameters": {
@@ -506,7 +664,8 @@
         "schema": {
           "type": "string",
           "format": "uuid"
-        }
+        },
+        "description": "Unique identifier of the resource addressed by this endpoint."
       },
       "Limit": {
         "name": "limit",
@@ -517,7 +676,8 @@
           "minimum": 1,
           "maximum": 100,
           "default": 20
-        }
+        },
+        "description": "Maximum number of top-level resources to return."
       },
       "Offset": {
         "name": "offset",
@@ -527,7 +687,8 @@
           "type": "integer",
           "minimum": 0,
           "default": 0
-        }
+        },
+        "description": "Number of top-level resources to skip before collecting results."
       }
     },
     "responses": {
@@ -536,7 +697,21 @@
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Response"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "error",
+                      "description": "Indicates that the request failed."
+                    }
+                  }
+                }
+              ]
             }
           }
         }
@@ -546,7 +721,21 @@
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Response"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "error",
+                      "description": "Indicates that the request failed."
+                    }
+                  }
+                }
+              ]
             }
           }
         }
@@ -556,7 +745,21 @@
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Response"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "error",
+                      "description": "Indicates that the request failed."
+                    }
+                  }
+                }
+              ]
             }
           }
         }
@@ -566,7 +769,21 @@
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Response"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "error",
+                      "description": "Indicates that the request failed."
+                    }
+                  }
+                }
+              ]
             }
           }
         }
@@ -576,7 +793,21 @@
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Response"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "error",
+                      "description": "Indicates that the request failed."
+                    }
+                  }
+                }
+              ]
             }
           }
         }
@@ -586,7 +817,21 @@
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Response"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "error",
+                      "description": "Indicates that the request failed."
+                    }
+                  }
+                }
+              ]
             }
           }
         }
@@ -628,7 +873,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Returns users visible to the current user, optionally filtered by the search query."
       }
     },
     "/users/me/comments": {
@@ -651,7 +897,14 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/CommentDTO"
+                        "oneOf": [
+                          {
+                            "$ref": "#/components/schemas/Comment"
+                          },
+                          {
+                            "$ref": "#/components/schemas/DeletedComment"
+                          }
+                        ]
                       }
                     }
                   }
@@ -659,7 +912,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Returns comments authored by the current user using offset pagination."
       }
     },
     "/users/{id}/followers": {
@@ -681,7 +935,8 @@
           "200": {
             "description": "Array of PublicUsers"
           }
-        }
+        },
+        "description": "Returns users who follow the selected user and are visible to the requester."
       }
     },
     "/users/{id}/following": {
@@ -703,7 +958,8 @@
           "200": {
             "description": "Array of PublicUsers"
           }
-        }
+        },
+        "description": "Returns users followed by the selected user and visible to the requester."
       }
     },
     "/users/{id}/follow": {
@@ -730,7 +986,8 @@
           "200": {
             "description": "Followed or request pending"
           }
-        }
+        },
+        "description": "Follows a public profile immediately or creates a pending request for a private profile."
       },
       "delete": {
         "tags": ["Users"],
@@ -744,7 +1001,8 @@
           "200": {
             "description": "Successfully unfollowed"
           }
-        }
+        },
+        "description": "Removes an accepted follow relationship or cancels the current user's pending request."
       }
     },
     "/chats": {
@@ -852,7 +1110,8 @@
           "200": {
             "description": "Invitation sent"
           }
-        }
+        },
+        "description": "Invites an eligible user to join the selected group."
       }
     },
     "/events/{id}/invite": {
@@ -879,7 +1138,8 @@
           "200": {
             "description": "Invitation sent"
           }
-        }
+        },
+        "description": "Invites an eligible user to attend the selected event."
       }
     },
     "/users/register": {
@@ -946,7 +1206,8 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
-        }
+        },
+        "description": "Creates a user account from the submitted profile and credentials."
       }
     },
     "/users/login": {
@@ -983,7 +1244,8 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           }
-        }
+        },
+        "description": "Authenticates credentials and creates the session cookie used by protected endpoints."
       }
     },
     "/users/logout": {
@@ -994,7 +1256,8 @@
           "200": {
             "description": "Session removed"
           }
-        }
+        },
+        "description": "Invalidates the current session and clears its cookie."
       }
     },
     "/users/me": {
@@ -1020,7 +1283,8 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           }
-        }
+        },
+        "description": "Returns the authenticated user's complete profile and account settings."
       }
     },
     "/users/{id}/posts": {
@@ -1066,7 +1330,8 @@
           "404": {
             "$ref": "#/components/responses/NotFound"
           }
-        }
+        },
+        "description": "Returns posts the current user may view on the selected user's profile."
       }
     },
     "/posts": {
@@ -1093,7 +1358,8 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "When supplied, returns the selected group's feed and requires accepted membership."
           }
         ],
         "responses": {
@@ -1194,7 +1460,8 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
-        }
+        },
+        "description": "Creates a profile, follower-only, selected-follower, or group post with optional media."
       }
     },
     "/posts/{id}": {
@@ -1234,7 +1501,8 @@
           "404": {
             "$ref": "#/components/responses/NotFound"
           }
-        }
+        },
+        "description": "Returns the post when visible, using a minimal tombstone if it has been soft-deleted."
       },
       "patch": {
         "tags": ["Posts"],
@@ -1308,7 +1576,8 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
-        }
+        },
+        "description": "Updates the mutable content, media, and audience fields of the author's active post."
       },
       "delete": {
         "tags": ["Posts"],
@@ -1458,7 +1727,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Response"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "const": "error",
+                          "description": "Indicates that the request failed."
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -1466,7 +1749,8 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
-        }
+        },
+        "description": "Creates a top-level comment or reply on an active post, with optional media."
       }
     },
     "/posts/{id}/vote": {
@@ -1527,7 +1811,8 @@
           "409": {
             "$ref": "#/components/responses/Conflict"
           }
-        }
+        },
+        "description": "Creates or replaces the current user's mutually exclusive like or dislike vote."
       },
       "delete": {
         "tags": ["Votes"],
@@ -1563,7 +1848,8 @@
           "409": {
             "$ref": "#/components/responses/Conflict"
           }
-        }
+        },
+        "description": "Removes the current user's vote and returns the updated totals."
       }
     },
     "/comments/{id}": {
@@ -1633,7 +1919,8 @@
           "422": {
             "$ref": "#/components/responses/ValidationError"
           }
-        }
+        },
+        "description": "Updates the text or media of the author's active comment."
       },
       "delete": {
         "tags": ["Comments"],
@@ -1728,7 +2015,8 @@
           "409": {
             "$ref": "#/components/responses/Conflict"
           }
-        }
+        },
+        "description": "Creates or replaces the current user's mutually exclusive like or dislike vote."
       },
       "delete": {
         "tags": ["Votes"],
@@ -1764,7 +2052,8 @@
           "409": {
             "$ref": "#/components/responses/Conflict"
           }
-        }
+        },
+        "description": "Removes the current user's vote and returns the updated totals."
       }
     }
   }
