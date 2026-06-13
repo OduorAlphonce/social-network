@@ -3,7 +3,7 @@ import "./App.css";
 import Layout from "./components/layout/Layout";
 import Events from "./pages/Events.jsx"
 import Groups from "./pages/Groups.jsx";
-import PostDetails from "./pages/PostDetail.jsx";
+import Home from "./pages/Home.jsx";
 import Friends from "./pages/Friends.jsx";
 import Profile from "./pages/Profile.jsx";
 import Messages from "./pages/Messages.jsx";
@@ -14,7 +14,7 @@ function App() {
   <Routes>
 
   <Route path="/" element={<Layout />} >
-  <Route path="/" index element={<PostDetails/>}/>
+  <Route path="/" index element={<Home/>}/>
   <Route path="/profile" element={<Profile/>}/>
   <Route path="/friends" element={<Friends/>}/>
   <Route path="/events" element={<Events/>}/>
