@@ -31,12 +31,16 @@ const Post = ({ post }) => {
         </div>
       </div>
       <div className="post-body">
+        <p>{post?.content}</p>
         {post["image_url"] ? (
-          <img className="post-image" src={post["image_url"]} alt="post-image" />
+          <img
+            className="post-image"
+            src={post["image_url"]}
+            alt="post-image"
+          />
         ) : (
           <></>
         )}
-        <p>{post?.content}</p>
       </div>
       <div className="reaction-count">
         <div className="center">
