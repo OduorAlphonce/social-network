@@ -6,8 +6,8 @@ import Post from "../components/Post.jsx"
 function Home() {
   return (
     <div className='posts'>
-        {posts.map((it)=>{
-            return <Post/>
+        {posts.map((it,idx)=>{
+            return <Post key={idx} post={it}/>
         })}
     </div>
   )
