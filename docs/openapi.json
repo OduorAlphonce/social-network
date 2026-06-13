@@ -52,17 +52,11 @@
     "schemas": {
       "Response": {
         "type": "object",
-        "required": [
-          "status",
-          "message"
-        ],
+        "required": ["status", "message"],
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "success",
-              "error"
-            ]
+            "enum": ["success", "error"]
           },
           "message": {
             "type": "string"
@@ -103,10 +97,7 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "dm",
-              "group"
-            ]
+            "enum": ["dm", "group"]
           },
           "name": {
             "type": "string",
@@ -124,26 +115,18 @@
       "VoteRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "vote"
-        ],
+        "required": ["vote"],
         "properties": {
           "vote": {
             "type": "string",
-            "enum": [
-              "like",
-              "dislike"
-            ]
+            "enum": ["like", "dislike"]
           }
         }
       },
       "ErrorResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "status",
-          "message"
-        ],
+        "required": ["status", "message"],
         "properties": {
           "status": {
             "type": "string",
@@ -162,13 +145,7 @@
       },
       "PublicUser": {
         "type": "object",
-        "required": [
-          "id",
-          "first_name",
-          "last_name",
-          "nickname",
-          "avatar"
-        ],
+        "required": ["id", "first_name", "last_name", "nickname", "avatar"],
         "properties": {
           "id": {
             "type": "string",
@@ -181,16 +158,10 @@
             "type": "string"
           },
           "nickname": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "avatar": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           }
         }
       },
@@ -201,12 +172,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "email",
-              "date_of_birth",
-              "about_me",
-              "is_public"
-            ],
+            "required": ["email", "date_of_birth", "about_me", "is_public"],
             "properties": {
               "email": {
                 "type": "string",
@@ -217,10 +183,7 @@
                 "format": "date"
               },
               "about_me": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "is_public": {
                 "type": "boolean"
@@ -231,11 +194,7 @@
       },
       "ViewerVote": {
         "type": "string",
-        "enum": [
-          "like",
-          "dislike",
-          "none"
-        ]
+        "enum": ["like", "dislike", "none"]
       },
       "Post": {
         "type": "object",
@@ -268,28 +227,18 @@
             "$ref": "#/components/schemas/PublicUser"
           },
           "group_id": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "uuid"
           },
           "content": {
             "type": "string"
           },
           "image_url": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "privacy": {
             "type": "string",
-            "enum": [
-              "public",
-              "almost_private",
-              "private"
-            ],
+            "enum": ["public", "almost_private", "private"],
             "description": "Ignored for authorization when group_id is present; accepted group membership is then required."
           },
           "comment_count": {
@@ -312,10 +261,7 @@
             "format": "date-time"
           },
           "updated_at": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "date-time"
           }
         }
@@ -323,10 +269,7 @@
       "DeletedPost": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "deleted"
-        ],
+        "required": ["id", "deleted"],
         "properties": {
           "id": {
             "type": "string",
@@ -380,10 +323,7 @@
             "format": "uuid"
           },
           "parent_comment_id": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "uuid"
           },
           "author": {
@@ -393,10 +333,7 @@
             "type": "string"
           },
           "image_url": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "like_count": {
             "type": "integer",
@@ -414,10 +351,7 @@
             "format": "date-time"
           },
           "updated_at": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "date-time"
           },
           "replies": {
@@ -431,11 +365,7 @@
       "DeletedComment": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "id",
-          "deleted",
-          "replies"
-        ],
+        "required": ["id", "deleted", "replies"],
         "properties": {
           "id": {
             "type": "string",
@@ -466,11 +396,7 @@
       "VoteResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "like_count",
-          "dislike_count",
-          "viewer_vote"
-        ],
+        "required": ["like_count", "dislike_count", "viewer_vote"],
         "properties": {
           "like_count": {
             "type": "integer",
@@ -488,10 +414,7 @@
       "PostResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "status",
-          "data"
-        ],
+        "required": ["status", "data"],
         "properties": {
           "status": {
             "type": "string",
@@ -505,10 +428,7 @@
       "CommentResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "status",
-          "data"
-        ],
+        "required": ["status", "data"],
         "properties": {
           "status": {
             "type": "string",
@@ -522,11 +442,7 @@
       "PostListResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "status",
-          "data",
-          "pagination"
-        ],
+        "required": ["status", "data", "pagination"],
         "properties": {
           "status": {
             "type": "string",
@@ -546,11 +462,7 @@
       "CommentListResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "status",
-          "data",
-          "pagination"
-        ],
+        "required": ["status", "data", "pagination"],
         "properties": {
           "status": {
             "type": "string",
@@ -570,11 +482,7 @@
       "Pagination": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "limit",
-          "offset",
-          "has_more"
-        ],
+        "required": ["limit", "offset", "has_more"],
         "properties": {
           "limit": {
             "type": "integer",
@@ -688,9 +596,7 @@
   "paths": {
     "/users": {
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Get all users / Search users",
         "parameters": [
           {
@@ -727,10 +633,7 @@
     },
     "/users/me/comments": {
       "get": {
-        "tags": [
-          "Users",
-          "Comments"
-        ],
+        "tags": ["Users", "Comments"],
         "summary": "Get all comments made by the authenticated user",
         "security": [
           {
@@ -772,9 +675,7 @@
         }
       ],
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Get a user's followers",
         "responses": {
           "200": {
@@ -796,9 +697,7 @@
         }
       ],
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Get users followed by this user",
         "responses": {
           "200": {
@@ -820,9 +719,7 @@
         }
       ],
       "post": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Follow a user",
         "security": [
           {
@@ -836,9 +733,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Unfollow a user or cancel follow request",
         "security": [
           {
@@ -854,9 +749,7 @@
     },
     "/chats": {
       "get": {
-        "tags": [
-          "Chats"
-        ],
+        "tags": ["Chats"],
         "summary": "Get all active chat rooms",
         "description": "Returns a list of all DMs and Group chats the user is part of, sorted by recent activity.",
         "security": [
@@ -887,9 +780,7 @@
     },
     "/chats/dm": {
       "post": {
-        "tags": [
-          "Chats"
-        ],
+        "tags": ["Chats"],
         "summary": "Open a direct message with a user",
         "description": "Creates or retrieves an existing DM thread with the target user.",
         "security": [
@@ -903,9 +794,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "target_user_id"
-                ],
+                "required": ["target_user_id"],
                 "properties": {
                   "target_user_id": {
                     "type": "string",
@@ -936,9 +825,7 @@
         }
       ],
       "post": {
-        "tags": [
-          "Groups"
-        ],
+        "tags": ["Groups"],
         "summary": "Invite a user to a group",
         "security": [
           {
@@ -981,9 +868,7 @@
         }
       ],
       "post": {
-        "tags": [
-          "Groups"
-        ],
+        "tags": ["Groups"],
         "summary": "Invite a user to an event",
         "security": [
           {
@@ -999,9 +884,7 @@
     },
     "/users/register": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Register a user",
         "requestBody": {
           "required": true,
@@ -1036,22 +919,13 @@
                     "format": "date"
                   },
                   "avatar": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   },
                   "nickname": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   },
                   "about_me": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   },
                   "is_public": {
                     "type": "boolean",
@@ -1077,9 +951,7 @@
     },
     "/users/login": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Create a session",
         "requestBody": {
           "required": true,
@@ -1087,10 +959,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email",
-                  "password"
-                ],
+                "required": ["email", "password"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -1119,9 +988,7 @@
     },
     "/users/logout": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Delete the current session",
         "responses": {
           "200": {
@@ -1132,9 +999,7 @@
     },
     "/users/me": {
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Get the current user",
         "security": [
           {
@@ -1171,10 +1036,7 @@
         }
       ],
       "get": {
-        "tags": [
-          "Users",
-          "Posts"
-        ],
+        "tags": ["Users", "Posts"],
         "summary": "Get posts visible on a user's profile",
         "security": [
           {
@@ -1209,9 +1071,7 @@
     },
     "/posts": {
       "get": {
-        "tags": [
-          "Posts"
-        ],
+        "tags": ["Posts"],
         "summary": "Get the home feed or a group feed",
         "description": "Without group_id, excludes group posts and applies ordinary privacy. With group_id, requires accepted membership and returns only that group's posts.",
         "security": [
@@ -1259,9 +1119,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Posts"
-        ],
+        "tags": ["Posts"],
         "summary": "Create a post",
         "security": [
           {
@@ -1280,18 +1138,11 @@
                   },
                   "privacy": {
                     "type": "string",
-                    "enum": [
-                      "public",
-                      "almost_private",
-                      "private"
-                    ],
+                    "enum": ["public", "almost_private", "private"],
                     "default": "public"
                   },
                   "group_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
+                    "type": ["string", "null"],
                     "format": "uuid"
                   },
                   "audience_ids": {
@@ -1303,24 +1154,17 @@
                     "description": "Repeat the audience_ids form field for each selected accepted follower."
                   },
                   "image": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
+                    "type": ["string", "null"],
                     "format": "binary",
                     "description": "Optional JPEG, PNG, or GIF up to 5 MiB."
                   }
                 },
                 "anyOf": [
                   {
-                    "required": [
-                      "content"
-                    ]
+                    "required": ["content"]
                   },
                   {
-                    "required": [
-                      "image"
-                    ]
+                    "required": ["image"]
                   }
                 ]
               }
@@ -1360,9 +1204,7 @@
         }
       ],
       "get": {
-        "tags": [
-          "Posts"
-        ],
+        "tags": ["Posts"],
         "summary": "Get a visible post or its tombstone",
         "security": [
           {
@@ -1395,9 +1237,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Posts"
-        ],
+        "tags": ["Posts"],
         "summary": "Edit an active post as its author",
         "security": [
           {
@@ -1416,11 +1256,7 @@
                   },
                   "privacy": {
                     "type": "string",
-                    "enum": [
-                      "public",
-                      "almost_private",
-                      "private"
-                    ]
+                    "enum": ["public", "almost_private", "private"]
                   },
                   "audience_ids": {
                     "type": "array",
@@ -1430,10 +1266,7 @@
                     }
                   },
                   "image": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
+                    "type": ["string", "null"],
                     "format": "binary"
                   },
                   "remove_image": {
@@ -1478,9 +1311,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Posts"
-        ],
+        "tags": ["Posts"],
         "summary": "Soft-delete a post as its author",
         "description": "Idempotent. Comments remain readable to users authorized by the retained post visibility data, but the deleted post accepts no new comments or votes.",
         "security": [
@@ -1527,9 +1358,7 @@
         }
       ],
       "get": {
-        "tags": [
-          "Comments"
-        ],
+        "tags": ["Comments"],
         "summary": "Get paginated top-level comments with all descendants",
         "description": "Includes minimal comment tombstones. Authorized users may read historical comments after post deletion.",
         "security": [
@@ -1563,9 +1392,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Comments"
-        ],
+        "tags": ["Comments"],
         "summary": "Create a comment or reply on an active post",
         "security": [
           {
@@ -1583,30 +1410,20 @@
                     "type": "string"
                   },
                   "parent_comment_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
+                    "type": ["string", "null"],
                     "format": "uuid"
                   },
                   "image": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
+                    "type": ["string", "null"],
                     "format": "binary"
                   }
                 },
                 "anyOf": [
                   {
-                    "required": [
-                      "content"
-                    ]
+                    "required": ["content"]
                   },
                   {
-                    "required": [
-                      "image"
-                    ]
+                    "required": ["image"]
                   }
                 ]
               }
@@ -1659,9 +1476,7 @@
         }
       ],
       "put": {
-        "tags": [
-          "Votes"
-        ],
+        "tags": ["Votes"],
         "summary": "Set or switch the current user's post vote",
         "security": [
           {
@@ -1675,16 +1490,11 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "vote"
-                ],
+                "required": ["vote"],
                 "properties": {
                   "vote": {
                     "type": "string",
-                    "enum": [
-                      "like",
-                      "dislike"
-                    ]
+                    "enum": ["like", "dislike"]
                   }
                 }
               }
@@ -1720,9 +1530,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Votes"
-        ],
+        "tags": ["Votes"],
         "summary": "Remove the current user's post vote",
         "security": [
           {
@@ -1765,9 +1573,7 @@
         }
       ],
       "patch": {
-        "tags": [
-          "Comments"
-        ],
+        "tags": ["Comments"],
         "summary": "Edit an active comment as its author",
         "security": [
           {
@@ -1785,10 +1591,7 @@
                     "type": "string"
                   },
                   "image": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
+                    "type": ["string", "null"],
                     "format": "binary"
                   },
                   "remove_image": {
@@ -1833,9 +1636,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Comments"
-        ],
+        "tags": ["Comments"],
         "summary": "Soft-delete a comment",
         "description": "Allowed for the comment author or parent post author. Idempotent and preserves descendants.",
         "security": [
@@ -1876,9 +1677,7 @@
         }
       ],
       "put": {
-        "tags": [
-          "Votes"
-        ],
+        "tags": ["Votes"],
         "summary": "Set or switch the current user's comment vote",
         "security": [
           {
@@ -1892,16 +1691,11 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "vote"
-                ],
+                "required": ["vote"],
                 "properties": {
                   "vote": {
                     "type": "string",
-                    "enum": [
-                      "like",
-                      "dislike"
-                    ]
+                    "enum": ["like", "dislike"]
                   }
                 }
               }
@@ -1937,9 +1731,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Votes"
-        ],
+        "tags": ["Votes"],
         "summary": "Remove the current user's comment vote",
         "security": [
           {
