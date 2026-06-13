@@ -47,7 +47,6 @@ func TestLoadDefaultsBaseAddressToLocalhost(t *testing.T) {
 	chdirTemp(t)
 	isolateConfigEnv(t)
 	t.Setenv("DATABASE_PATH", "app.db")
-	t.Setenv("MIGRATIONS_DIR", "migrations")
 
 	if err := load(nil); err != nil {
 		t.Fatalf("load returned an error: %v", err)
@@ -55,6 +54,13 @@ func TestLoadDefaultsBaseAddressToLocalhost(t *testing.T) {
 
 	if App.BaseAddress != "localhost" {
 		t.Errorf("BaseAddress = %q, want %q", App.BaseAddress, "localhost")
+	}
+	if App.MigrationsDir != "backend/internal/db/migrations" {
+		t.Errorf(
+			"MigrationsDir = %q, want %q",
+			App.MigrationsDir,
+			"backend/internal/db/migrations",
+		)
 	}
 }
 
@@ -68,9 +74,6 @@ func TestLoadReturnsErrorForMissingRequiredConfig(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "DATABASE_PATH") {
 		t.Errorf("error %q does not mention DATABASE_PATH", err)
-	}
-	if !strings.Contains(err.Error(), "MIGRATIONS_DIR") {
-		t.Errorf("error %q does not mention MIGRATIONS_DIR", err)
 	}
 }
 

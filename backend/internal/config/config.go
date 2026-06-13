@@ -26,8 +26,8 @@ type Config struct {
 	// AllowedOrigin is the origin permitted to make cross-origin requests. It
 	// uses ALLOWED_ORIGIN and defaults to "*".
 	AllowedOrigin string
-	// MigrationsDir is the required directory containing database migrations.
-	// It uses MIGRATIONS_DIR.
+	// MigrationsDir is the directory containing database migrations. It uses
+	// MIGRATIONS_DIR and defaults to backend/internal/db/migrations.
 	MigrationsDir string
 }
 
@@ -52,7 +52,7 @@ func load(args []string) error {
 		BaseAddress:   getEnv("BASE_ADDRESS", "localhost"),
 		AppEnv:        getEnv("APP_ENV", "development"),
 		AllowedOrigin: getEnv("ALLOWED_ORIGIN", "*"),
-		MigrationsDir: getEnv("MIGRATIONS_DIR", ""),
+		MigrationsDir: getEnv("MIGRATIONS_DIR", "backend/internal/db/migrations"),
 	}
 
 	flags := flag.NewFlagSet("server", flag.ContinueOnError)
@@ -84,9 +84,6 @@ func validate(cfg Config) error {
 	var missing []string
 	if cfg.DatabasePath == "" {
 		missing = append(missing, "DATABASE_PATH")
-	}
-	if cfg.MigrationsDir == "" {
-		missing = append(missing, "MIGRATIONS_DIR")
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("required configuration is not set: %v", missing)
