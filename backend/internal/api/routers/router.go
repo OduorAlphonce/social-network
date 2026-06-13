@@ -38,7 +38,7 @@ func RegisterRoutes(database *sql.DB) http.Handler {
 
 	// Setup simple logging and CORS middleware
 	handler := middleware.CorsMiddleware(mux)
-	
+
 	// Public routes
 	mux.HandleFunc("/api/users/register", userHandler.Register)
 	mux.HandleFunc("/api/users/login", userHandler.Login)

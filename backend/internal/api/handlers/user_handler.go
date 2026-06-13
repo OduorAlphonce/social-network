@@ -12,6 +12,7 @@ import (
 
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
+	// "learn.zone01kisumu.ke/git/qquinton/social-network/internal/utils"
 )
 
 type UserHandler struct {
@@ -70,7 +71,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 			// Create uploads folder
 			uploadsDir := "./uploads/avatars"
-			err = os.MkdirAll(uploadsDir, 0755)
+			err = os.MkdirAll(uploadsDir, 0o755)
 			if err != nil {
 				http.Error(w, "Failed to create uploads directory", http.StatusInternalServerError)
 				return

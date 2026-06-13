@@ -8,11 +8,11 @@ import (
 )
 
 type Config struct {
-	Port             string
-	DatabasePath     string
-	AppEnv           string
-	AllowedOrigin 	 string
-	MigrationsDir	 string
+	Port          string
+	DatabasePath  string
+	AppEnv        string
+	AllowedOrigin string
+	MigrationsDir string
 }
 
 var App Config
@@ -25,11 +25,11 @@ func Load() {
 	}
 
 	App = Config{
-		Port:             getEnv("PORT", "8080"),
-		DatabasePath:      mustGetEnv("DATABASE_PATH"),
-		AppEnv:           getEnv("APP_ENV", "development"),
-		AllowedOrigin:           getEnv("ALLOWED_ORIGIN", "*"),
-		MigrationsDir:           mustGetEnv("MIGRATIONS_DIR"),
+		Port:          getEnv("PORT", "8080"),
+		DatabasePath:  mustGetEnv("DATABASE_PATH"),
+		AppEnv:        getEnv("APP_ENV", "development"),
+		AllowedOrigin: getEnv("ALLOWED_ORIGIN", "*"),
+		MigrationsDir: mustGetEnv("MIGRATIONS_DIR"),
 	}
 }
 
