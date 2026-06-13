@@ -22,7 +22,6 @@ var allowedTypes = map[string]string{
 }
 
 func SaveImage(file io.ReadSeeker) (string, error) {
-	// Read first bytes
 	buffer := make([]byte, 512)
 
 	n, err := file.Read(buffer)
@@ -46,8 +45,7 @@ func SaveImage(file io.ReadSeeker) (string, error) {
 		return "", err
 	}
 
-	err = os.MkdirAll(ImageDir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(ImageDir, 0755); err != nil {
 		return "", err
 	}
 
@@ -57,7 +55,6 @@ func SaveImage(file io.ReadSeeker) (string, error) {
 	}
 
 	filename := id.String() + ext
-
 	fullPath := filepath.Join(ImageDir, filename)
 
 	dst, err := os.Create(fullPath)
@@ -80,9 +77,7 @@ func DeleteImage(path string) error {
 		return nil
 	}
 
-	fullPath := "." + path
-
-	err := os.Remove(fullPath)
+	err := os.Remove("." + path)
 
 	if os.IsNotExist(err) {
 		return nil
