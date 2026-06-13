@@ -16,7 +16,7 @@ graph TD
     WS <-->|SQL Queries| DB
 ```
 
-*   **Frontend**: Built with **React 19**, **Vite** (for fast bundling/HMR), **React Router v7** (for routing), and **React Icons**.
+*   **Frontend**: Built with plain **JavaScript/JSX**, **React 19**, **Vite** (for fast bundling/HMR), **React Router v7** (for routing), and **React Icons**. TypeScript is not part of this project.
 *   **Backend**: Built with **Go 1.22.2**, utilizing the standard library `net/http`, `github.com/mattn/go-sqlite3` for database storage, `golang.org/x/crypto/bcrypt` for secure authentication, and `github.com/gofrs/uuid/v5` for UUID generation.
 *   **Database**: **SQLite** with a custom lightweight migration runner.
 *   **Real-time Communication**: WebSockets for instant message delivery.
@@ -77,9 +77,11 @@ The relational database is built using **SQLite**. The schema defined in [docs/s
 *   **`users`**: Stores registration info, optional profile details (avatar, nickname, about me), public/private status, and follower counter caches.
 *   **`sessions`**: Manages token-based session persistence mapping to cookies.
 *   **`followers`**: Tracks relationships with states (`pending` or `accepted`).
-*   **`posts`**: User and group posts with privacy validation rules (`public`, `almost_private`, `private`).
+*   **`posts`**: User and group posts with privacy rules, edit timestamps, soft deletion, and cached comment/like/dislike counts.
 *   **`post_audiences`**: Defines specific users authorized to view target private posts.
-*   **`comments`**: Threaded post replies (supporting parent-child comments).
+*   **`post_votes`**: Stores one mutually exclusive like/dislike vote per user and post.
+*   **`comments`**: Threaded post replies with edit timestamps and soft-deletion tombstones that retain their descendants.
+*   **`comment_votes`**: Stores one mutually exclusive like/dislike vote per user and comment.
 *   **`groups`**: Group spaces created by users.
 *   **`group_members`**: Group membership status (`pending_invite`, `pending_request`, `accepted`).
 *   **`events`**: Event entities within a group.
@@ -187,12 +189,21 @@ docker run -p 8080:8080 \
 *   **Public**: Displayed globally.
 *   **Almost Private**: Displayed only to followers.
 *   **Private**: Visible only to a targeted list of followers chosen by the creator (stored inside `post_audiences`).
+*   **Group posts**: Visible only to accepted members of their group and excluded from the general feed.
 
-### 4. Group Events & RSVPs
+### 4. Posting and Commenting Contract
+*   Posts and comments may contain text, a JPEG/PNG image, a GIF, or text plus media.
+*   A user may like or dislike a post/comment, but cannot hold both votes at once.
+*   Authors may edit active posts/comments. A successful edit sets `updated_at`; creation leaves it null.
+*   Deletes are soft deletes. Deleted posts expose only `id` and `deleted`; deleted comments expose only `id`, `deleted`, and `replies`.
+*   Deleting a comment does not remove its replies. Deleting a post preserves its historical comment thread.
+*   Users who remain authorized by the retained post privacy/group data may read that thread after post deletion, but no one may add comments or votes to the deleted post.
+
+### 5. Group Events & RSVPs
 *   Group members can schedule events.
 *   Events have RSVP choices: `Going` and `Not going`. RSVPs are tracked dynamically per member.
 
-### 5. Websockets (Chat)
+### 6. Websockets (Chat)
 *   Websocket handshakes are authenticated.
 *   Private DMs are delivered instantly when users are following each other.
 *   Group chat rooms broadcast messages in real-time to active online members of that group.
@@ -200,8 +211,7 @@ docker run -p 8080:8080 \
 ---
 
 ## 📜 API Reference
-The complete API routing and payload format specifications are defined in the OpenAPI 3.0 file:
-📄 [docs/openapi.json](file:///home/qquinton/group/social-network/docs/openapi.json)
+The API routing and payload formats are defined in [`docs/openapi.json`](docs/openapi.json). The local API base URL is `http://localhost:8080/api`.
 
 Key endpoints include:
 *   `POST /api/users/register` - Create an account.
@@ -210,3 +220,9 @@ Key endpoints include:
 *   `GET /api/users/me` - Fetch profile metadata of the current logged-in user.
 *   `POST /api/followers/follow` - Initiate a follow request or auto-follow.
 *   `POST /api/followers/unfollow` - Unfollow a user.
+*   `GET|POST /api/posts` - Read the visible feed or create a post.
+*   `GET|PATCH|DELETE /api/posts/{id}` - Read, edit, or soft-delete a post.
+*   `GET|POST /api/posts/{id}/comments` - Read a nested thread or create a comment/reply.
+*   `PATCH|DELETE /api/comments/{id}` - Edit or soft-delete a comment.
+*   `PUT|DELETE /api/posts/{id}/vote` - Set/switch or remove a post vote.
+*   `PUT|DELETE /api/comments/{id}/vote` - Set/switch or remove a comment vote.

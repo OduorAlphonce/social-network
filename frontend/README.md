@@ -1,16 +1,29 @@
-# React + Vite
+# Social Network Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The frontend is a React 19 application built with Vite, React Router,
+React Icons and plain JavaScript/JSX.
+See [`../docs/openapi.json`](../docs/openapi.json) for request and response shapes.
 
-Currently, two official plugins are available:
+## Commands
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+npm run lint
+npm run build
+```
 
-## React Compiler
+The app runs at `http://localhost:5173` during development and calls the backend at `http://localhost:8080/api`. Requests to protected routes must include credentials so the `session_token` cookie is sent.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Conventions
 
-## Expanding the ESLint configuration
+- Keep API field names aligned with `../docs/openapi.json`.
+- Use ordinary JavaScript objects for post and comment DTOs.
+  JSDoc may be used where it improves editor support.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Posting Behavior
+
+- Deleted posts are minimal tombstones.
+  Deleted comments remain in the recursive thread so replies keep their context.
+- Authorized users may read an existing comment thread after its post is deleted,
+  but the UI must hide creation, edit, and vote controls for that deleted post.
