@@ -1,0 +1,13 @@
+.home-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.posts {
+  margin: 10px;
+  flex-basis: 2;
+}
+.quick-links {
+  flex-basis: 1;
+}
