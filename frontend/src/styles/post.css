@@ -35,13 +35,14 @@
 .post-body {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  margin: 5px;
 }
 
 .post-image {
   max-width: 100%;
   height: auto;
   object-fit: contain;
-  margin: 10px;
   border-radius: 10px;
 }
 
