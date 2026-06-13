@@ -1,12 +1,14 @@
 .home-container {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   width: 80%;
   background: rgba(34, 52, 151, 0.527);
 }
 .posts {
-    width: 100%;
+  width: 100%;
   margin: 10px;
 }
 .quick-links {
+  height: 100vh;
+  background-color: #ffffffa9;
 }

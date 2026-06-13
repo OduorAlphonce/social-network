@@ -1,9 +1,11 @@
 .post-container {
+  background-color: #ffffffa9;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   width: 50%;
   padding: 10px;
-  border: 1px solid;
+  border: 1px transparent;
   border-radius: 10px;
   margin: 10px;
 }
