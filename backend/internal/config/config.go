@@ -1,36 +1,75 @@
 package config
 
 import (
-	"log"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
 	"os"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Port             string
-	DatabasePath     string
-	AppEnv           string
-	AllowedOrigin 	 string
-	MigrationsDir	 string
+	// Port is the HTTP server's TCP port. It uses PORT or --port and defaults
+	// to 8080.
+	Port string
+	// DatabasePath is the required SQLite database file path. It uses
+	// DATABASE_PATH or --database-path.
+	DatabasePath string
+	// BaseAddress is the HTTP server's host or IP address. It uses BASE_ADDRESS
+	// or --base-address and defaults to localhost.
+	BaseAddress string
+	// AppEnv identifies the runtime environment. It uses APP_ENV and defaults
+	// to development.
+	AppEnv string
+	// AllowedOrigin is the origin permitted to make cross-origin requests. It
+	// uses ALLOWED_ORIGIN and defaults to "*".
+	AllowedOrigin string
+	// MigrationsDir is the required directory containing database migrations.
+	// It uses MIGRATIONS_DIR.
+	MigrationsDir string
 }
 
 var App Config
 
-// Load reads environment variables (optionally from .env) and populates the
-// package-level App configuration value.
-func Load() {
+// Load reads configuration from .env, environment variables, and command-line
+// options, in increasing order of precedence.
+func Load() error {
+	return load(os.Args[1:])
+}
+
+func load(args []string) error {
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, reading from environment")
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("load .env: %w", err)
+		}
 	}
 
-	App = Config{
-		Port:             getEnv("PORT", "8080"),
-		DatabasePath:      mustGetEnv("DATABASE_PATH"),
-		AppEnv:           getEnv("APP_ENV", "development"),
-		AllowedOrigin:           getEnv("ALLOWED_ORIGIN", "*"),
-		MigrationsDir:           mustGetEnv("MIGRATIONS_DIR"),
+	cfg := Config{
+		Port:          getEnv("PORT", "8080"),
+		DatabasePath:  getEnv("DATABASE_PATH", ""),
+		BaseAddress:   getEnv("BASE_ADDRESS", "localhost"),
+		AppEnv:        getEnv("APP_ENV", "development"),
+		AllowedOrigin: getEnv("ALLOWED_ORIGIN", "*"),
+		MigrationsDir: getEnv("MIGRATIONS_DIR", ""),
 	}
+
+	flags := flag.NewFlagSet("server", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	flags.StringVar(&cfg.Port, "port", cfg.Port, "application port")
+	flags.StringVar(&cfg.DatabasePath, "database-path", cfg.DatabasePath, "database file path")
+	flags.StringVar(&cfg.BaseAddress, "base-address", cfg.BaseAddress, "application base address")
+	if err := flags.Parse(args); err != nil {
+		return fmt.Errorf("parse command-line options: %w", err)
+	}
+
+	if err := validate(cfg); err != nil {
+		return err
+	}
+
+	App = cfg
+	return nil
 }
 
 // getEnv returns the environment variable value or the provided fallback.
@@ -41,12 +80,16 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// mustGetEnv returns the value for a required env var or logs/fails when
-// it's missing.
-func mustGetEnv(key string) string {
-	value, ok := os.LookupEnv(key)
-	if !ok || value == "" {
-		log.Fatalf("Required enviroment variable %s is not set", key)
+func validate(cfg Config) error {
+	var missing []string
+	if cfg.DatabasePath == "" {
+		missing = append(missing, "DATABASE_PATH")
 	}
-	return value
+	if cfg.MigrationsDir == "" {
+		missing = append(missing, "MIGRATIONS_DIR")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("required configuration is not set: %v", missing)
+	}
+	return nil
 }

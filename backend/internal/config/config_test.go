@@ -1,0 +1,141 @@
+package config
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestLoadPrecedence(t *testing.T) {
+	chdirTemp(t)
+	isolateConfigEnv(t)
+	writeDotEnv(t, strings.Join([]string{
+		"PORT=7000",
+		"DATABASE_PATH=dotenv.db",
+		"BASE_ADDRESS=dotenv-host",
+		"MIGRATIONS_DIR=dotenv-migrations",
+	}, "\n"))
+
+	t.Setenv("PORT", "8000")
+	t.Setenv("DATABASE_PATH", "environment.db")
+	t.Setenv("BASE_ADDRESS", "environment-host")
+
+	if err := load([]string{
+		"--port", "9000",
+		"--database-path", "flag.db",
+		"--base-address", "flag-host",
+	}); err != nil {
+		t.Fatalf("load returned an error: %v", err)
+	}
+
+	if App.Port != "9000" {
+		t.Errorf("Port = %q, want %q", App.Port, "9000")
+	}
+	if App.DatabasePath != "flag.db" {
+		t.Errorf("DatabasePath = %q, want %q", App.DatabasePath, "flag.db")
+	}
+	if App.BaseAddress != "flag-host" {
+		t.Errorf("BaseAddress = %q, want %q", App.BaseAddress, "flag-host")
+	}
+	if App.MigrationsDir != "dotenv-migrations" {
+		t.Errorf("MigrationsDir = %q, want %q", App.MigrationsDir, "dotenv-migrations")
+	}
+}
+
+func TestLoadDefaultsBaseAddressToLocalhost(t *testing.T) {
+	chdirTemp(t)
+	isolateConfigEnv(t)
+	t.Setenv("DATABASE_PATH", "app.db")
+	t.Setenv("MIGRATIONS_DIR", "migrations")
+
+	if err := load(nil); err != nil {
+		t.Fatalf("load returned an error: %v", err)
+	}
+
+	if App.BaseAddress != "localhost" {
+		t.Errorf("BaseAddress = %q, want %q", App.BaseAddress, "localhost")
+	}
+}
+
+func TestLoadReturnsErrorForMissingRequiredConfig(t *testing.T) {
+	chdirTemp(t)
+	isolateConfigEnv(t)
+
+	err := load(nil)
+	if err == nil {
+		t.Fatal("load returned nil, want an error")
+	}
+	if !strings.Contains(err.Error(), "DATABASE_PATH") {
+		t.Errorf("error %q does not mention DATABASE_PATH", err)
+	}
+	if !strings.Contains(err.Error(), "MIGRATIONS_DIR") {
+		t.Errorf("error %q does not mention MIGRATIONS_DIR", err)
+	}
+}
+
+func TestLoadReturnsErrorForInvalidCommandLineOption(t *testing.T) {
+	chdirTemp(t)
+	isolateConfigEnv(t)
+	t.Setenv("DATABASE_PATH", "app.db")
+	t.Setenv("MIGRATIONS_DIR", "migrations")
+
+	err := load([]string{"--unknown-option"})
+	if err == nil {
+		t.Fatal("load returned nil, want an error")
+	}
+}
+
+func chdirTemp(t *testing.T) {
+	t.Helper()
+
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("get working directory: %v", err)
+	}
+	if err := os.Chdir(t.TempDir()); err != nil {
+		t.Fatalf("change working directory: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(originalDir); err != nil {
+			t.Errorf("restore working directory: %v", err)
+		}
+	})
+}
+
+func writeDotEnv(t *testing.T, contents string) {
+	t.Helper()
+
+	if err := os.WriteFile(filepath.Join(".", ".env"), []byte(contents), 0o600); err != nil {
+		t.Fatalf("write .env: %v", err)
+	}
+}
+
+func isolateConfigEnv(t *testing.T) {
+	t.Helper()
+
+	for _, key := range []string{
+		"PORT",
+		"DATABASE_PATH",
+		"BASE_ADDRESS",
+		"APP_ENV",
+		"ALLOWED_ORIGIN",
+		"MIGRATIONS_DIR",
+	} {
+		value, ok := os.LookupEnv(key)
+		if err := os.Unsetenv(key); err != nil {
+			t.Fatalf("unset %s: %v", key, err)
+		}
+		t.Cleanup(func() {
+			var err error
+			if ok {
+				err = os.Setenv(key, value)
+			} else {
+				err = os.Unsetenv(key)
+			}
+			if err != nil {
+				t.Errorf("restore %s: %v", key, err)
+			}
+		})
+	}
+}
