@@ -3,7 +3,7 @@ import "../styles/post.css";
 import { Dislike, Like } from "./Reactions";
 import avatar from "../assets/user.svg";
 
-const Post = () => {
+const Post = ({post}) => {
   const [likePost, setLikePost] = useState(false);
   const [dislikePost, setDislikePost] = useState(false);
 
