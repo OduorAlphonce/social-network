@@ -2,9 +2,7 @@ import { MdOutlineEvent, MdOutlineGroup } from "react-icons/md";
 import { AiOutlineMessage } from "react-icons/ai";
 import { IoIosNotificationsOutline } from "react-icons/io";
 import { BiGroup, BiHome, BiUser } from "react-icons/bi";
-import { Link, useNavigate } from "react-router";
-import Events from "../pages/Events";
-import Groups from "../pages/Groups";
+import { useNavigate } from "react-router";
 
 const Sidebar = () => {
   const navigate = useNavigate();
