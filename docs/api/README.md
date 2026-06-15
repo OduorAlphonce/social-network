@@ -4,14 +4,8 @@
 Social Network API.
 
 The document is a design specification, not a guarantee that every path is
-currently available. The running backend currently registers:
-
-- `POST /api/users/register`
-- `POST /api/users/login`
-- `POST /api/users/logout`
-- `GET /api/users/me`
-- Follow, unfollow, accept, reject, followers, and following operations under
-  `/api/followers/`
+currently available. It can be opened with an OpenAPI compatible visualiser like
+[swagger editor](https://editor.swagger.io/).
 
 Consult `backend/internal/api/routers/router.go` when checking runtime endpoint
 availability. The local API base URL is `http://localhost:8080/api`.
