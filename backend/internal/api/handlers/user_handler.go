@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/middleware"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/utils"
@@ -179,27 +180,23 @@ func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{
+	utils.SuccessResponse(w, map[string]string{
 		"message": "Logout successful",
-	})
+	}, http.StatusOK)
 }
 
 func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("session_token")
-	if err != nil {
+	if r.Method != http.MethodGet {
+		utils.ErrorResponse(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+
+	user, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
 		utils.ErrorResponse(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	user, err := h.userService.Authenticate(cookie.Value)
-	if err != nil {
-		utils.ErrorResponse(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(models.UserResponse{
+	response := models.UserResponse{
 		ID:          user.ID,
 		Email:       user.Email,
 		FirstName:   user.FirstName,
@@ -210,5 +207,7 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		AboutMe:     user.AboutMe,
 		IsPublic:    user.IsPublic,
 		CreatedAt:   user.CreatedAt,
-	})
+	}
+
+	utils.SuccessResponse(w, response, http.StatusOK)
 }
