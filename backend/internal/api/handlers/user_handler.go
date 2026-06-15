@@ -194,7 +194,7 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = utils.SendSuccess(w, http.StatusOK, "User retrieved successfully", models.UserResponse{
+	response := utils.SendSuccess(w, http.StatusOK, "User retrieved successfully", models.UserResponse{
 		ID:          user.ID,
 		Email:       user.Email,
 		FirstName:   user.FirstName,
@@ -206,4 +206,6 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		IsPublic:    user.IsPublic,
 		CreatedAt:   user.CreatedAt,
 	})
+
+	utils.SuccessResponse(w, response, http.StatusOK)
 }

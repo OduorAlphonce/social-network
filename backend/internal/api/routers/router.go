@@ -29,13 +29,18 @@ func RegisterRoutes(
 	}
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
 
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+	
 	// Public routes
 	mux.HandleFunc("/api/users/register", userHandler.Register)
 	mux.HandleFunc("/api/users/login", userHandler.Login)
-	mux.HandleFunc("/api/users/logout", userHandler.Logout)
 
 	// Authenticated routes
-	mux.Handle("/api/users/me", authMiddleware(http.HandlerFunc(userHandler.Me)))
+	mux.Handle("/api/users/me", http.HandlerFunc(userHandler.Me))
+	mux.HandleFunc("/api/users/logout", userHandler.Logout)
 
 	mux.Handle("/api/followers/follow", authMiddleware(http.HandlerFunc(followerHandler.Follow)))
 	mux.Handle("/api/followers/unfollow", authMiddleware(http.HandlerFunc(followerHandler.Unfollow)))
@@ -44,6 +49,5 @@ func RegisterRoutes(
 	mux.Handle("/api/followers/followers", authMiddleware(http.HandlerFunc(followerHandler.GetFollowers)))
 	mux.Handle("/api/followers/following", authMiddleware(http.HandlerFunc(followerHandler.GetFollowing)))
 
-	// Setup simple logging and CORS middleware
-	return middleware.CorsMiddleware(mux, allowedOrigin)
+	return middleware.CorsMiddleware(mux)
 }

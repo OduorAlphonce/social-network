@@ -1,0 +1,6 @@
+[
+  {
+    "type": "sqlite",
+    "path": "/home/fcharles/Documents/social-network/backend/internal/db/sn.db"
+  }
+]
