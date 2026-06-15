@@ -6,7 +6,7 @@ server starts.
 
 [`schema.dbml`](schema.dbml) describes the target data model, including planned
 features that do not have migrations yet. It can be opened with a DBML-compatible
-tool to visualize relationships.
+tool to visualize relationships like [dbdiagram.io/d](https://dbdiagram.io/d).
 
 ## Current Migrations
 
