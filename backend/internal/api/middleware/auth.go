@@ -6,6 +6,7 @@ import (
 
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/utils"
 )
 
 type contextKey string
@@ -17,13 +18,13 @@ func Auth(userService services.UserService) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie("session_token")
 			if err != nil {
-				http.Error(w, "Unauthorized: Session cookie missing", http.StatusUnauthorized)
+				_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized: Session cookie missing", nil)
 				return
 			}
 
 			user, err := userService.Authenticate(cookie.Value)
 			if err != nil {
-				http.Error(w, "Unauthorized: Invalid or expired session", http.StatusUnauthorized)
+				_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized: Invalid or expired session", nil)
 				return
 			}
 

@@ -1,13 +1,13 @@
-import { Route, Routes } from 'react-router';
-import './App.css';
-import Layout from './components/layout/Layout';
-import Events from './pages/Events.jsx';
-import Groups from './pages/Groups.jsx';
-import Home from './pages/Home.jsx';
-import Friends from './pages/Friends.jsx';
-import Profile from './pages/Profile.jsx';
-import Messages from './pages/Messages.jsx';
-import Notifications from './pages/Notifications.jsx';
+import { Route, Routes } from "react-router";
+import "./App.css";
+import Layout from "./components/layout/Layout";
+import Events from "./pages/Events.jsx";
+import Groups from "./pages/Groups.jsx";
+import Home from "./pages/Home.jsx";
+import Friends from "./pages/Friends.jsx";
+import Profile from "./pages/Profile.jsx";
+import Messages from "./pages/Messages.jsx";
+import Notifications from "./pages/Notifications.jsx";
 
 function App() {
   return (
