@@ -68,7 +68,9 @@ const getErrorMessage = (data, response) => {
  *
  * @param {string|URL} url API endpoint.
  * @param {RequestInit & {body?: *}} [options={}] Fetch options.
- * @returns {Promise<*>} Parsed response body, or null when the response is empty.
+ * Standard success envelopes are unwrapped to return their `data` payload.
+ *
+ * @returns {Promise<*>} Response payload, parsed body, or null when empty.
  * @throws {ApiError} When the network request or API response fails.
  */
 export const apiFetch = async (url, options = {}) => {
@@ -117,6 +119,15 @@ export const apiFetch = async (url, options = {}) => {
       statusText: response.statusText,
       data,
     });
+  }
+
+  if (
+    data &&
+    typeof data === "object" &&
+    data.status === "success" &&
+    Object.prototype.hasOwnProperty.call(data, "data")
+  ) {
+    return data.data;
   }
 
   return data;
