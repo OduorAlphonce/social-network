@@ -9,6 +9,7 @@ import (
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/middleware"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/utils"
 )
 
 type FollowerHandler struct {
@@ -25,162 +26,149 @@ func NewFollowerHandler(fs services.FollowerService, us services.UserService) *F
 
 func (h *FollowerHandler) Follow(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		utils.ErrorResponse(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	currentUser, ok := middleware.GetUserFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		utils.ErrorResponse(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	var input models.FollowRequestInput
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil || input.FollowingID == "" {
-		http.Error(w, "Invalid input. following_id is required.", http.StatusBadRequest)
+		utils.ErrorResponse(w, "Invalid input. following_id is required.", http.StatusBadRequest)
 		return
 	}
 
 	followingUUID, err := uuid.FromString(input.FollowingID)
 	if err != nil {
-		http.Error(w, "Invalid following_id format.", http.StatusBadRequest)
+		utils.ErrorResponse(w, "Invalid following_id format.", http.StatusBadRequest)
 		return
 	}
 
-	status, err := h.followerService.Follow(currentUser.ID, followingUUID)
+	_, err = h.followerService.Follow(currentUser.ID, followingUUID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.ErrorResponse(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"message": "Follow request processed",
-		"status":  status,
-	})
+	utils.SuccessResponse(w, map[string]string{"message":"Follow request processed"}, http.StatusAccepted)
 }
 
 func (h *FollowerHandler) Unfollow(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		utils.ErrorResponse(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	currentUser, ok := middleware.GetUserFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
 		return
 	}
 
 	var input models.FollowRequestInput
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil || input.FollowingID == "" {
-		http.Error(w, "Invalid input. following_id is required.", http.StatusBadRequest)
+		_ = utils.SendError(w, http.StatusBadRequest, "Invalid input", map[string]string{"following_id": "is required"})
 		return
 	}
 
 	followingUUID, err := uuid.FromString(input.FollowingID)
 	if err != nil {
-		http.Error(w, "Invalid following_id format.", http.StatusBadRequest)
+		_ = utils.SendError(w, http.StatusBadRequest, "Invalid input", map[string]string{"following_id": "has an invalid format"})
 		return
 	}
 
 	err = h.followerService.Unfollow(currentUser.ID, followingUUID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		_ = utils.SendError(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"message": "Unfollowed successfully",
-	})
+	_ = utils.SendSuccess(w, http.StatusOK, "Unfollowed successfully", nil)
 }
 
 func (h *FollowerHandler) AcceptFollow(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
 		return
 	}
 
 	currentUser, ok := middleware.GetUserFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
 		return
 	}
 
 	var input models.AcceptRejectFollowInput
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil || input.FollowerID == "" {
-		http.Error(w, "Invalid input. follower_id is required.", http.StatusBadRequest)
+		_ = utils.SendError(w, http.StatusBadRequest, "Invalid input", map[string]string{"follower_id": "is required"})
 		return
 	}
 
 	followerUUID, err := uuid.FromString(input.FollowerID)
 	if err != nil {
-		http.Error(w, "Invalid follower_id format.", http.StatusBadRequest)
+		_ = utils.SendError(w, http.StatusBadRequest, "Invalid input", map[string]string{"follower_id": "has an invalid format"})
 		return
 	}
 
 	err = h.followerService.AcceptFollow(followerUUID, currentUser.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		_ = utils.SendError(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"message": "Follow request accepted",
-	})
+	_ = utils.SendSuccess(w, http.StatusOK, "Follow request accepted", nil)
 }
 
 func (h *FollowerHandler) RejectFollow(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
 		return
 	}
 
 	currentUser, ok := middleware.GetUserFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
 		return
 	}
 
 	var input models.AcceptRejectFollowInput
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil || input.FollowerID == "" {
-		http.Error(w, "Invalid input. follower_id is required.", http.StatusBadRequest)
+		_ = utils.SendError(w, http.StatusBadRequest, "Invalid input", map[string]string{"follower_id": "is required"})
 		return
 	}
 
 	followerUUID, err := uuid.FromString(input.FollowerID)
 	if err != nil {
-		http.Error(w, "Invalid follower_id format.", http.StatusBadRequest)
+		_ = utils.SendError(w, http.StatusBadRequest, "Invalid input", map[string]string{"follower_id": "has an invalid format"})
 		return
 	}
 
 	err = h.followerService.RejectFollow(followerUUID, currentUser.ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		_ = utils.SendError(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"message": "Follow request rejected",
-	})
+	_ = utils.SendSuccess(w, http.StatusOK, "Follow request rejected", nil)
 }
 
 func (h *FollowerHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
 		return
 	}
 
 	currentUser, ok := middleware.GetUserFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
 		return
 	}
 
@@ -189,7 +177,7 @@ func (h *FollowerHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	if targetUserIDStr != "" {
 		parsed, err := uuid.FromString(targetUserIDStr)
 		if err != nil {
-			http.Error(w, "Invalid user_id format.", http.StatusBadRequest)
+			_ = utils.SendError(w, http.StatusBadRequest, "Invalid input", map[string]string{"user_id": "has an invalid format"})
 			return
 		}
 		targetUserID = parsed
@@ -201,14 +189,14 @@ func (h *FollowerHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	if targetUserID != currentUser.ID {
 		err := h.verifyAccess(currentUser.ID, targetUserID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusForbidden)
+			_ = utils.SendError(w, http.StatusForbidden, err.Error(), nil)
 			return
 		}
 	}
 
 	followers, err := h.followerService.GetFollowers(targetUserID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		_ = utils.SendError(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
@@ -229,19 +217,18 @@ func (h *FollowerHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(response)
+	_ = utils.SendSuccess(w, http.StatusOK, "Followers retrieved successfully", response)
 }
 
 func (h *FollowerHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
 		return
 	}
 
 	currentUser, ok := middleware.GetUserFromContext(r.Context())
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
 		return
 	}
 
@@ -250,7 +237,7 @@ func (h *FollowerHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	if targetUserIDStr != "" {
 		parsed, err := uuid.FromString(targetUserIDStr)
 		if err != nil {
-			http.Error(w, "Invalid user_id format.", http.StatusBadRequest)
+			_ = utils.SendError(w, http.StatusBadRequest, "Invalid input", map[string]string{"user_id": "has an invalid format"})
 			return
 		}
 		targetUserID = parsed
@@ -262,14 +249,14 @@ func (h *FollowerHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	if targetUserID != currentUser.ID {
 		err := h.verifyAccess(currentUser.ID, targetUserID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusForbidden)
+			_ = utils.SendError(w, http.StatusForbidden, err.Error(), nil)
 			return
 		}
 	}
 
 	following, err := h.followerService.GetFollowing(targetUserID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		_ = utils.SendError(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
@@ -289,8 +276,7 @@ func (h *FollowerHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(response)
+	_ = utils.SendSuccess(w, http.StatusOK, "Following retrieved successfully", response)
 }
 
 func (h *FollowerHandler) verifyAccess(currentUserID, targetUserID uuid.UUID) error {

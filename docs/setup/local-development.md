@@ -48,8 +48,8 @@ npm run dev
 
 Vite serves the frontend at `http://localhost:5173` by default.
 
-The current frontend is primarily a UI scaffold. As API integration is added,
-requests should target `http://localhost:8080/api` and include credentials for
+The Vite development server proxies `/api` requests to
+`http://localhost:8080`. The shared request helper includes credentials for
 authenticated routes so the session cookie is sent.
 
 ## Validation
@@ -65,6 +65,7 @@ Run frontend checks:
 
 ```bash
 cd frontend
+npm test
 npm run lint
 npm run build
 ```
@@ -72,6 +73,5 @@ npm run build
 ## Docker Status
 
 The repository contains a backend `Dockerfile`, but it is not currently a
-complete supported full-stack workflow: there is no frontend image or Compose
-configuration, and the backend image's migration path still needs to be aligned
-with `backend/internal/db/migrations/`. Use the local setup above for now.
+complete supported full-stack workflow because there is no frontend image or
+Compose configuration. Use the local setup above for now.

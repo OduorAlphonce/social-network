@@ -12,7 +12,7 @@ import (
 
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
-	// "learn.zone01kisumu.ke/git/qquinton/social-network/internal/utils"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/utils"
 )
 
 type UserHandler struct {
@@ -25,7 +25,7 @@ func NewUserHandler(us services.UserService) *UserHandler {
 
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
 		return
 	}
 
@@ -36,7 +36,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		// Parse multipart form (10 MB limit)
 		err := r.ParseMultipartForm(10 << 20)
 		if err != nil {
-			http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
+			_ = utils.SendError(w, http.StatusBadRequest, "Failed to parse multipart form", nil)
 			return
 		}
 
@@ -58,14 +58,14 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 			buff := make([]byte, 512)
 			_, err = file.Read(buff)
 			if err != nil {
-				http.Error(w, "Failed to read avatar file", http.StatusInternalServerError)
+				_ = utils.SendError(w, http.StatusInternalServerError, "Failed to read avatar file", nil)
 				return
 			}
 			_, _ = file.Seek(0, io.SeekStart)
 
 			fileType := http.DetectContentType(buff)
 			if fileType != "image/jpeg" && fileType != "image/png" && fileType != "image/gif" {
-				http.Error(w, "Invalid file type. Only JPEG, PNG, and GIF are allowed.", http.StatusBadRequest)
+				_ = utils.SendError(w, http.StatusBadRequest, "Invalid file type. Only JPEG, PNG, and GIF are allowed.", nil)
 				return
 			}
 
@@ -73,7 +73,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 			uploadsDir := "./uploads/avatars"
 			err = os.MkdirAll(uploadsDir, 0o755)
 			if err != nil {
-				http.Error(w, "Failed to create uploads directory", http.StatusInternalServerError)
+				_ = utils.SendError(w, http.StatusInternalServerError, "Failed to create uploads directory", nil)
 				return
 			}
 
@@ -93,14 +93,14 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 			dst, err := os.Create(filePath)
 			if err != nil {
-				http.Error(w, "Failed to save avatar", http.StatusInternalServerError)
+				_ = utils.SendError(w, http.StatusInternalServerError, "Failed to save avatar", nil)
 				return
 			}
 			defer dst.Close()
 
 			_, err = io.Copy(dst, file)
 			if err != nil {
-				http.Error(w, "Failed to write avatar file", http.StatusInternalServerError)
+				_ = utils.SendError(w, http.StatusInternalServerError, "Failed to write avatar file", nil)
 				return
 			}
 
@@ -110,25 +110,23 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		// Handle JSON
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			_ = utils.SendError(w, http.StatusBadRequest, "Invalid request body", nil)
 			return
 		}
 	}
 
 	userResponse, err := h.userService.Register(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		_ = utils.SendError(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(userResponse)
+	_ = utils.SendSuccess(w, http.StatusCreated, "User registered successfully", userResponse)
 }
 
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
 		return
 	}
 
@@ -139,13 +137,13 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		_ = utils.SendError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
 	session, err := h.userService.Login(req.Email, req.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		_ = utils.SendError(w, http.StatusUnauthorized, err.Error(), nil)
 		return
 	}
 
@@ -159,10 +157,8 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"message": "Login successful",
-		"token":   session.ID.String(),
+	_ = utils.SendSuccess(w, http.StatusOK, "Login successful", map[string]string{
+		"token": session.ID.String(),
 	})
 }
 
@@ -182,27 +178,23 @@ func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"message": "Logout successful",
-	})
+	_ = utils.SendSuccess(w, http.StatusOK, "Logout successful", nil)
 }
 
 func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
 		return
 	}
 
 	user, err := h.userService.Authenticate(cookie.Value)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(models.UserResponse{
+	response := utils.SendSuccess(w, http.StatusOK, "User retrieved successfully", models.UserResponse{
 		ID:          user.ID,
 		Email:       user.Email,
 		FirstName:   user.FirstName,
@@ -214,4 +206,6 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		IsPublic:    user.IsPublic,
 		CreatedAt:   user.CreatedAt,
 	})
+
+	utils.SuccessResponse(w, response, http.StatusOK)
 }

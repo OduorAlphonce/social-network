@@ -10,14 +10,15 @@ and response shapes.
 ```bash
 npm install
 npm run dev
+npm test
 npm run lint
 npm run build
 ```
 
 The app runs at `http://localhost:5173` during development. The current pages
-are primarily a UI scaffold; as API integration is added, requests should call
-`http://localhost:8080/api`. Protected requests must include credentials so the
-`session_token` cookie is sent.
+are primarily a UI scaffold. Vite proxies `/api` requests to
+`http://localhost:8080`, and the shared API helper includes credentials so the
+`session_token` cookie is sent for protected requests.
 
 ## Conventions
 
