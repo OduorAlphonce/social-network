@@ -36,19 +36,17 @@ func RegisterRoutes(database *sql.DB) http.Handler {
 	}
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
 
-	// Setup simple logging and CORS middleware
-	handler := middleware.CorsMiddleware(mux)
 	
 	// Public routes
 	mux.HandleFunc("/api/users/register", userHandler.Register)
 	mux.HandleFunc("/api/users/login", userHandler.Login)
-	mux.HandleFunc("/api/users/logout", userHandler.Logout)
 
 	// Auth middleware
 	auth := middleware.Auth(userService)
 
 	// Authenticated routes
 	mux.Handle("/api/users/me", auth(http.HandlerFunc(userHandler.Me)))
+	mux.HandleFunc("/api/users/logout", userHandler.Logout)
 
 	mux.Handle("/api/followers/follow", auth(http.HandlerFunc(followerHandler.Follow)))
 	mux.Handle("/api/followers/unfollow", auth(http.HandlerFunc(followerHandler.Unfollow)))
@@ -57,5 +55,5 @@ func RegisterRoutes(database *sql.DB) http.Handler {
 	mux.Handle("/api/followers/followers", auth(http.HandlerFunc(followerHandler.GetFollowers)))
 	mux.Handle("/api/followers/following", auth(http.HandlerFunc(followerHandler.GetFollowing)))
 
-	return handler
+	return middleware.CorsMiddleware(mux)
 }
