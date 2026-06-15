@@ -55,11 +55,18 @@ func TestLoadDefaultsBaseAddressToLocalhost(t *testing.T) {
 	if App.BaseAddress != "localhost" {
 		t.Errorf("BaseAddress = %q, want %q", App.BaseAddress, "localhost")
 	}
-	if App.MigrationsDir != "backend/internal/db/migrations" {
+	if App.AllowedOrigin != "http://localhost:5173" {
+		t.Errorf(
+			"AllowedOrigin = %q, want %q",
+			App.AllowedOrigin,
+			"http://localhost:5173",
+		)
+	}
+	if App.MigrationsDir != "./internal/db/migrations" {
 		t.Errorf(
 			"MigrationsDir = %q, want %q",
 			App.MigrationsDir,
-			"backend/internal/db/migrations",
+			"./internal/db/migrations",
 		)
 	}
 }

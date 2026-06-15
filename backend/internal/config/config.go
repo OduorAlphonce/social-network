@@ -24,10 +24,10 @@ type Config struct {
 	// to development.
 	AppEnv string
 	// AllowedOrigin is the origin permitted to make cross-origin requests. It
-	// uses ALLOWED_ORIGIN and defaults to "*".
+	// uses ALLOWED_ORIGIN and defaults to the Vite development origin.
 	AllowedOrigin string
 	// MigrationsDir is the directory containing database migrations. It uses
-	// MIGRATIONS_DIR and defaults to backend/internal/db/migrations.
+	// MIGRATIONS_DIR and defaults to ./internal/db/migrations.
 	MigrationsDir string
 }
 
@@ -51,8 +51,8 @@ func load(args []string) error {
 		DatabasePath:  getEnv("DATABASE_PATH", ""),
 		BaseAddress:   getEnv("BASE_ADDRESS", "localhost"),
 		AppEnv:        getEnv("APP_ENV", "development"),
-		AllowedOrigin: getEnv("ALLOWED_ORIGIN", "*"),
-		MigrationsDir: getEnv("MIGRATIONS_DIR", "backend/internal/db/migrations"),
+		AllowedOrigin: getEnv("ALLOWED_ORIGIN", "http://localhost:5173"),
+		MigrationsDir: getEnv("MIGRATIONS_DIR", "./internal/db/migrations"),
 	}
 
 	flags := flag.NewFlagSet("server", flag.ContinueOnError)

@@ -44,7 +44,7 @@ func main() {
 	authMiddleware := middleware.Auth(userService)
 
 	// Register Routes
-	handler := routers.RegisterRoutes(userHandler, followerHandler, authMiddleware)
+	handler := routers.RegisterRoutes(userHandler, followerHandler, authMiddleware, config.App.AllowedOrigin)
 
 	address := net.JoinHostPort(config.App.BaseAddress, config.App.Port)
 	log.Printf("Server starting on %s...", address)

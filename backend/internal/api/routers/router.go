@@ -13,7 +13,12 @@ import (
 // It maps URL paths to their corresponding handler functions, sets up static file serving for uploads,
 // and wraps the router with necessary middleware like CORS and authentication.
 // Note that all registered application endpoints fall under the "/api/" path.
-func RegisterRoutes(userHandler *handlers.UserHandler, followerHandler *handlers.FollowerHandler, authMiddleware func(http.Handler) http.Handler) http.Handler {
+func RegisterRoutes(
+	userHandler *handlers.UserHandler,
+	followerHandler *handlers.FollowerHandler,
+	authMiddleware func(http.Handler) http.Handler,
+	allowedOrigin string,
+) http.Handler {
 	// Initialize ServeMux
 	mux := http.NewServeMux()
 
@@ -40,5 +45,5 @@ func RegisterRoutes(userHandler *handlers.UserHandler, followerHandler *handlers
 	mux.Handle("/api/followers/following", authMiddleware(http.HandlerFunc(followerHandler.GetFollowing)))
 
 	// Setup simple logging and CORS middleware
-	return middleware.CorsMiddleware(mux)
+	return middleware.CorsMiddleware(mux, allowedOrigin)
 }
