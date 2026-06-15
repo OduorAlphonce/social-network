@@ -36,6 +36,10 @@ func RegisterRoutes(database *sql.DB) http.Handler {
 	}
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
 
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
 	
 	// Public routes
 	mux.HandleFunc("/api/users/register", userHandler.Register)
