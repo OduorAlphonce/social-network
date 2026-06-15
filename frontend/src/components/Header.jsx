@@ -1,10 +1,10 @@
-import { IoArrowRedo } from 'react-icons/io5';
-import '../styles/header.css';
-import { FaPlusCircle } from 'react-icons/fa';
-import { AiOutlineMessage } from 'react-icons/ai';
-import { IoIosNotificationsOutline } from 'react-icons/io';
-import { MdOutlineGroup } from 'react-icons/md';
-import avatar from '../assets/user.svg';
+import { IoArrowRedo } from "react-icons/io5";
+import "../styles/header.css";
+import { FaPlusCircle } from "react-icons/fa";
+import { AiOutlineMessage } from "react-icons/ai";
+import { IoIosNotificationsOutline } from "react-icons/io";
+import { MdOutlineGroup } from "react-icons/md";
+import avatar from "../assets/user.svg";
 const Header = () => {
   return (
     <div className="header">
