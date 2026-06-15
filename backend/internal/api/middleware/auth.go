@@ -18,21 +18,13 @@ func Auth(userService services.UserService) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie("session_token")
 			if err != nil {
-<<<<<<< HEAD
-				utils.ErrorResponse(w, "Unauthorized: Session cookie missing", http.StatusUnauthorized)
-=======
 				_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized: Session cookie missing", nil)
->>>>>>> main
 				return
 			}
 
 			user, err := userService.Authenticate(cookie.Value)
 			if err != nil {
-<<<<<<< HEAD
-				utils.ErrorResponse(w, "Unauthorized: Invalid or expired session", http.StatusUnauthorized)
-=======
 				_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized: Invalid or expired session", nil)
->>>>>>> main
 				return
 			}
 
