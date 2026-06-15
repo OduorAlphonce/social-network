@@ -247,6 +247,80 @@
         ],
         "description": "The authenticated user's public identity and private profile fields."
       },
+      "UserProfile": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PublicUser"
+          },
+          {
+            "type": "object",
+            "required": [
+              "email",
+              "date_of_birth",
+              "about_me",
+              "is_public",
+              "follower_count",
+              "following_count",
+              "posts",
+              "followers",
+              "following"
+            ],
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "date_of_birth": {
+                "type": "string",
+                "format": "date"
+              },
+              "about_me": {
+                "type": ["string", "null"]
+              },
+              "is_public": {
+                "type": "boolean"
+              },
+              "follower_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "following_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "posts": {
+                "type": "array",
+                "description": "Posts authored by the user that are visible to the requester, in feed order.",
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Post"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DeletedPost"
+                    }
+                  ]
+                }
+              },
+              "followers": {
+                "type": "array",
+                "description": "Users following this profile who are visible to the requester.",
+                "items": {
+                  "$ref": "#/components/schemas/PublicUser"
+                }
+              },
+              "following": {
+                "type": "array",
+                "description": "Users followed by this profile who are visible to the requester.",
+                "items": {
+                  "$ref": "#/components/schemas/PublicUser"
+                }
+              }
+            }
+          }
+        ],
+        "description": "A user's complete profile, including signup information, authored posts, followers, and followed users, returned when the requester is allowed to view it."
+      },
       "ViewerVote": {
         "type": "string",
         "enum": ["like", "dislike", "none"],
@@ -875,6 +949,47 @@
           }
         },
         "description": "Returns users visible to the current user, optionally filtered by the search query."
+      }
+    },
+    "/users/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get a user's profile",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "Returns the selected user's complete profile when it is public, owned by the requester, or visible through an accepted follow relationship."
       }
     },
     "/users/me/comments": {
