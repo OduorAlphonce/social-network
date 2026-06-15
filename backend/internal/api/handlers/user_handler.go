@@ -49,7 +49,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		file, _, err := r.FormFile("avatar")
 		if err == nil {
 			defer file.Close()
-
+			
 			req.Avatar, err = utils.SaveImage(file, "/uploads/avatars/")
 			if err != nil {
 				utils.SendError(w, http.StatusInternalServerError, "Failed to save image", nil)
