@@ -49,12 +49,21 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		file, _, err := r.FormFile("avatar")
 		if err == nil {
 			defer file.Close()
-			
+
 			req.Avatar, err = utils.SaveImage(file, "/uploads/avatars/")
 			if err != nil {
 				utils.SendError(w, http.StatusInternalServerError, "Failed to save image", nil)
 				return
 			}
+		}
+		_, err = h.userService.Register(&req)
+		if err != nil {
+			if req.Avatar != "" {
+				_ = utils.DeleteImage(req.Avatar)
+			}
+
+			_ = utils.SendError(w, http.StatusBadRequest, err.Error(), nil)
+			return
 		}
 	} else {
 		// Handle JSON
