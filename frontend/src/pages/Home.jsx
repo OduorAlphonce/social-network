@@ -6,6 +6,8 @@ import "../styles/home.css";
 import UpcomingEvent from "../components/UpcomingEvent.jsx";
 
 function Home() {
+  const posts = [];
+
   return (
     <div className="home-container">
       <div className="posts">
