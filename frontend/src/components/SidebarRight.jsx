@@ -1,5 +1,6 @@
 import React from "react";
 import UpcomingEvent from "./UpcomingEvent";
+import "../styles/sidebar-right.css"
 
 const SidebarRight = () => {
   const events = [
