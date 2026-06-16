@@ -1,6 +1,6 @@
 Project SocialNetwork {
   database_type: 'SQLite'
-  Note: 'Database schema for a Facebook-like social network (v1.2.0)'
+  Note: 'Database schema for a Facebook-like social network (v1.3.0)'
 }
 
 Table users {
@@ -26,14 +26,16 @@ Table users {
 
 Table sessions {
   id uuid [pk]
-  user_id uuid [ref: > users.id]
+  user_id uuid
   expires_at timestamp [not null]
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
 }
 
+Ref: sessions.user_id > users.id [delete: cascade]
+
 Table followers {
-  follower_id uuid [ref: > users.id]
-  followee_id uuid [ref: > users.id]
+  follower_id uuid
+  followee_id uuid
   status varchar [not null, note: '"pending" or "accepted"']
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
 
@@ -42,13 +44,16 @@ Table followers {
   }
 }
 
+Ref: followers.follower_id > users.id [delete: cascade]
+Ref: followers.followee_id > users.id [delete: cascade]
+
 Table posts {
   id uuid [pk]
-  user_id uuid [ref: > users.id, not null]
+  user_id uuid [null, note: 'Set to NULL only after the author account is deleted and the post is soft-deleted']
   group_id uuid [ref: > groups.id, null]
   content text [note: 'Required unless image_url is present for active posts; cleared on soft deletion']
   image_url varchar
-  privacy varchar [not null, note: '"public", "almost_private", "private". Enforced in migration SQL with CHECK(privacy IN (\'public\', \'almost_private\', \'private\')).']
+  privacy varchar [not null, note: '"public" - all users, "almost_private" - only followers, "private" - only selected followers. Enforced in migration SQL with CHECK(privacy IN (\'public\', \'almost_private\', \'private\')).']
 
   // Counter Caches
   comment_count integer [default: 0]
@@ -65,12 +70,14 @@ Table posts {
     (group_id, created_at)
   }
 
-  Note: 'Soft-deleted rows retain ownership, privacy, group, and audience data for authorization, but API tombstones expose only id and deleted.'
+  Note: 'Soft-deleted rows retain privacy, group, and audience data for authorization, but API tombstones expose only id and deleted. Account deletion soft-deletes authored posts before ON DELETE SET NULL removes the author reference.'
 }
+
+Ref: posts.user_id > users.id [delete: set null]
 
 Table post_audiences {
   post_id uuid [ref: > posts.id]
-  user_id uuid [ref: > users.id]
+  user_id uuid
 
   indexes {
     (post_id, user_id) [pk]
@@ -78,9 +85,11 @@ Table post_audiences {
   }
 }
 
+Ref: post_audiences.user_id > users.id [delete: cascade]
+
 Table post_votes {
   post_id uuid [ref: > posts.id]
-  user_id uuid [ref: > users.id]
+  user_id uuid
   vote varchar [not null, note: 'Allowed values: "like", "dislike"; enforce with CHECK']
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
   updated_at timestamp [null, note: 'Set when the user changes between like and dislike.']
@@ -93,11 +102,13 @@ Table post_votes {
   Note: 'One row per user and post guarantees mutually exclusive like/dislike voting. Deleting the row removes the vote.'
 }
 
+Ref: post_votes.user_id > users.id [delete: cascade]
+
 Table comments {
   id uuid [pk]
   post_id uuid [ref: > posts.id, not null]
-  user_id uuid [ref: > users.id, not null]
-  parent_comment_id uuid [null, note: 'Self-reference without ON DELETE CASCADE; soft-deleted parents retain replies']
+  user_id uuid [null, note: 'Set to NULL only after the author account is deleted and the comment is soft-deleted']
+  parent_comment_id uuid [ref: > comments.id, null, note: 'Self-reference without ON DELETE CASCADE; soft-deleted parents retain replies']
   content text [note: 'Required unless image_url is present for active comments; cleared on soft deletion']
   image_url varchar
 
@@ -115,14 +126,14 @@ Table comments {
     (user_id, created_at) [name: 'idx_comments_user_created', note: 'Supports user activity queries']
   }
 
-  Note: 'Soft-deleted comments serialize as id/deleted/replies tombstones and remain in the thread.'
+  Note: 'Soft-deleted comments serialize as id/deleted/replies tombstones and remain in the thread. Account deletion soft-deletes authored comments before ON DELETE SET NULL removes the author reference.'
 }
 
-Ref: comments.parent_comment_id > comments.id
+Ref: comments.user_id > users.id [delete: set null]
 
 Table comment_votes {
   comment_id uuid [ref: > comments.id]
-  user_id uuid [ref: > users.id]
+  user_id uuid
   vote varchar [not null, note: '"like" or "dislike". Enforced in migration SQL with CHECK(vote IN (\'like\', \'dislike\')).']
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
   updated_at timestamp [null, note: 'Set when the user changes between like and dislike.']
@@ -135,17 +146,21 @@ Table comment_votes {
   Note: 'One row per user and comment guarantees mutually exclusive like/dislike voting. Deleting the row removes the vote.'
 }
 
+Ref: comment_votes.user_id > users.id [delete: cascade]
+
 Table groups {
   id uuid [pk]
-  creator_id uuid [ref: > users.id, not null]
+  creator_id uuid [null, note: 'Set to NULL when the creator deletes their account; the group remains active']
   title varchar [not null]
   description text
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
 }
 
+Ref: groups.creator_id > users.id [delete: set null]
+
 Table group_members {
   group_id uuid [ref: > groups.id]
-  user_id uuid [ref: > users.id]
+  user_id uuid
   status varchar [not null, note: '"pending_invite", "pending_request", "accepted"']
 
   indexes {
@@ -153,19 +168,23 @@ Table group_members {
   }
 }
 
+Ref: group_members.user_id > users.id [delete: cascade]
+
 Table events {
   id uuid [pk]
   group_id uuid [ref: > groups.id, not null]
-  creator_id uuid [ref: > users.id, not null]
+  creator_id uuid [null, note: 'Set to NULL when the creator deletes their account; the event remains active']
   title varchar [not null]
   description text
   event_date timestamp [not null]
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
 }
 
+Ref: events.creator_id > users.id [delete: set null]
+
 Table event_rsvps {
   event_id uuid [ref: > events.id]
-  user_id uuid [ref: > users.id]
+  user_id uuid
   status varchar [not null, note: '"going", "not_going", "pending_invite"']
 
   indexes {
@@ -173,10 +192,12 @@ Table event_rsvps {
   }
 }
 
+Ref: event_rsvps.user_id > users.id [delete: cascade]
+
 Table dm_threads {
   id uuid [pk]
-  user1_id uuid [ref: > users.id]
-  user2_id uuid [ref: > users.id]
+  user1_id uuid
+  user2_id uuid
   last_message_at timestamp [default: `CURRENT_TIMESTAMP`]
 
   indexes {
@@ -186,10 +207,13 @@ Table dm_threads {
   Note: 'Creates a distinct "Chat Room" entity for direct messages. Makes querying the /chats list incredibly fast.'
 }
 
+Ref: dm_threads.user1_id > users.id [delete: cascade]
+Ref: dm_threads.user2_id > users.id [delete: cascade]
+
 Table messages {
   id uuid [pk]
-  sender_id uuid [ref: > users.id, not null]
-  dm_thread_id uuid [ref: > dm_threads.id, null, note: 'Used if this is a DM']
+  sender_id uuid [not null]
+  dm_thread_id uuid [null, note: 'Used if this is a DM']
   group_id uuid [ref: > groups.id, null, note: 'Used if this is a group chat']
   content text [not null]
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
@@ -197,11 +221,16 @@ Table messages {
   Note: 'Consolidated table for both DM and Group messages.'
 }
 
+Ref: messages.sender_id > users.id [delete: cascade]
+Ref: messages.dm_thread_id > dm_threads.id [delete: cascade]
+
 Table notifications {
   id uuid [pk]
-  user_id uuid [ref: > users.id, not null]
+  user_id uuid
   type varchar [not null, note: '"follow_request", "group_invite", "event_invite", "group_request", "event_created"']
   source_id uuid [not null]
   is_read boolean [default: false]
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
 }
+
+Ref: notifications.user_id > users.id [delete: cascade]
