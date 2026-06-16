@@ -5,6 +5,8 @@ import { AiOutlineMessage } from "react-icons/ai";
 import { IoIosNotificationsOutline } from "react-icons/io";
 import { MdOutlineGroup } from "react-icons/md";
 import avatar from "../assets/user.svg";
+import LogoutButton from "./LogoutButton";
+
 const Header = () => {
   return (
     <div className="header">
@@ -23,6 +25,7 @@ const Header = () => {
         <IoIosNotificationsOutline size={24} />
         <MdOutlineGroup size={24} />
         <img src={avatar} className="profile-photo" />
+        <LogoutButton />
       </div>
     </div>
   );
