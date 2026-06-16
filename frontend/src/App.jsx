@@ -10,13 +10,21 @@ import Messages from "./pages/Messages.jsx";
 import Notifications from "./pages/Notifications.jsx";
 import RegisterForm from "./components/RegisterForm";
 import LoginForm from "./components/LoginForm";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
     <Routes>
       <Route path="/register" element={<RegisterForm />} />
       <Route path="/login" element={<LoginForm />} />
-      <Route path="/" element={<Layout />}>
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Home />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/friends" element={<Friends />} />
