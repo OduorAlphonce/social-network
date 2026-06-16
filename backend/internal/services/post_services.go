@@ -44,6 +44,7 @@ func (s *PostService) GetSinglePost(ctx context.Context, postID string, viewerID
 	if err != nil {
 		return nill, ErrpostNotFound
 	}
+	
 canAccess, err := s.permChecker.CanViewPost(ctx, viewerID, post)
 	if err != nil {
 		return nil, err
