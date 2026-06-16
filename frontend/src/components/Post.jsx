@@ -2,6 +2,7 @@ import { useState } from "react";
 import "../styles/post.css";
 import { Dislike, Like } from "./Reactions";
 import avatar from "../assets/user.svg";
+import { MdPublic } from "react-icons/md";
 
 const Post = ({ post }) => {
   const [likePost, setLikePost] = useState(false);
@@ -19,15 +20,21 @@ const Post = ({ post }) => {
 
   return (
     <div className="post-container">
-      <div className="post-header">
-        <img
-          src={post?.author?.avatar ? post.author.avatar : avatar}
-          alt="avatar"
-          className="profile-photo"
-        />
-        <div className="post-bio">
-          <h5>{post?.author?.name}</h5>
-          <small>16:06</small>
+      <div className="top-bar">
+        <div className="post-header">
+          <img
+            src={post?.author?.avatar ? post.author.avatar : avatar}
+            alt="avatar"
+            className="profile-photo"
+          />
+          <div className="post-bio">
+            <h5>{post?.author?.name}</h5>
+            <small>16:06</small>
+          </div>
+        </div>
+        <div className="visibility">
+          <MdPublic />
+          <span>public</span>
         </div>
       </div>
       <div className="post-body">
