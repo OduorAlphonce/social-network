@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Social Network API",
-    "description": "HTTP contract for the Go backend and React JavaScript frontend. Posting supports privacy, nested comments, JPEG/PNG/GIF media, mutually exclusive like/dislike votes, author edits, and soft-deletion tombstones.",
-    "version": "1.2.0"
+    "description": "HTTP contract for the Go backend and React JavaScript frontend. Posting supports privacy, nested comments, JPEG/PNG/GIF media, mutually exclusive like/dislike votes, author edits, soft-deletion tombstones, groups, events, chat, notifications, and WebSocket delivery.",
+    "version": "1.3.0"
   },
   "servers": [
     {
@@ -38,7 +38,15 @@
     },
     {
       "name": "Groups",
-      "description": "Group and event invitations"
+      "description": "Groups, membership requests, invitations, and group events"
+    },
+    {
+      "name": "Notifications",
+      "description": "Follow, group, event, and other user notifications"
+    },
+    {
+      "name": "Realtime",
+      "description": "WebSocket connection for live messages and notifications"
     }
   ],
   "components": {
@@ -53,11 +61,19 @@
       "Response": {
         "description": "Standard API response envelope. Successful responses contain a payload in `data` and no field errors. Error responses contain no payload and may provide field-specific messages in `errors`.",
         "type": "object",
-        "required": ["status", "message", "data", "errors"],
+        "required": [
+          "status",
+          "message",
+          "data",
+          "errors"
+        ],
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["success", "error"],
+            "enum": [
+              "success",
+              "error"
+            ],
             "description": "Whether the request succeeded or failed."
           },
           "message": {
@@ -125,6 +141,24 @@
               }
             }
           }
+        ],
+        "examples": [
+          {
+            "status": "success",
+            "message": "Request completed successfully.",
+            "data": {
+              "id": "example"
+            },
+            "errors": null
+          },
+          {
+            "status": "error",
+            "message": "Validation failed.",
+            "data": null,
+            "errors": {
+              "email": "Email is already in use."
+            }
+          }
         ]
       },
       "PrivateUser": {
@@ -147,7 +181,18 @@
             }
           }
         ],
-        "description": "User details that are visible only to the authenticated owner."
+        "description": "User details that are visible only to the authenticated owner.",
+        "examples": [
+          {
+            "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+            "first_name": "Amina",
+            "last_name": "Njeri",
+            "nickname": "amina",
+            "avatar": "/uploads/avatars/amina.png",
+            "email": "amina@example.com",
+            "dob": "1998-04-12"
+          }
+        ]
       },
       "ChatRoom": {
         "type": "object",
@@ -159,7 +204,10 @@
           },
           "type": {
             "type": "string",
-            "enum": ["dm", "group"],
+            "enum": [
+              "dm",
+              "group"
+            ],
             "description": "The kind of conversation."
           },
           "name": {
@@ -176,24 +224,56 @@
             "description": "When the conversation last received activity."
           }
         },
-        "description": "A direct-message or group conversation visible to the current user."
+        "description": "A direct-message or group conversation visible to the current user.",
+        "examples": [
+          {
+            "id": "f9b81580-91f1-42ef-b0c9-f9170587d57c",
+            "type": "dm",
+            "name": "Amina Njeri",
+            "last_message": "Hey, are you joining the walk this weekend?",
+            "updated_at": "2026-06-16T09:15:00Z"
+          },
+          {
+            "id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+            "type": "group",
+            "name": "Nairobi Weekend Hikers",
+            "last_message": "See you all on Saturday.",
+            "updated_at": "2026-06-16T10:00:00Z"
+          }
+        ]
       },
       "VoteRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["vote"],
+        "required": [
+          "vote"
+        ],
         "properties": {
           "vote": {
             "type": "string",
-            "enum": ["like", "dislike"],
+            "enum": [
+              "like",
+              "dislike"
+            ],
             "description": "The desired vote value."
           }
         },
-        "description": "The vote the current user wants to set on a post or comment."
+        "description": "The vote the current user wants to set on a post or comment.",
+        "examples": [
+          {
+            "vote": "like"
+          }
+        ]
       },
       "PublicUser": {
         "type": "object",
-        "required": ["id", "first_name", "last_name", "nickname", "avatar"],
+        "required": [
+          "id",
+          "first_name",
+          "last_name",
+          "nickname",
+          "avatar"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -209,15 +289,30 @@
             "description": "The user's last name."
           },
           "nickname": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "The user's optional nickname."
           },
           "avatar": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "URL of the user's avatar, or null when none is set."
           }
         },
-        "description": "The public identity fields used when embedding a user in another resource."
+        "description": "The public identity fields used when embedding a user in another resource.",
+        "examples": [
+          {
+            "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+            "first_name": "Amina",
+            "last_name": "Njeri",
+            "nickname": "amina",
+            "avatar": "/uploads/avatars/amina.png"
+          }
+        ]
       },
       "CurrentUser": {
         "allOf": [
@@ -226,7 +321,12 @@
           },
           {
             "type": "object",
-            "required": ["email", "date_of_birth", "about_me", "is_public"],
+            "required": [
+              "email",
+              "date_of_birth",
+              "about_me",
+              "is_public"
+            ],
             "properties": {
               "email": {
                 "type": "string",
@@ -237,7 +337,10 @@
                 "format": "date"
               },
               "about_me": {
-                "type": ["string", "null"]
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "is_public": {
                 "type": "boolean"
@@ -245,7 +348,20 @@
             }
           }
         ],
-        "description": "The authenticated user's public identity and private profile fields."
+        "description": "The authenticated user's public identity and private profile fields.",
+        "examples": [
+          {
+            "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+            "first_name": "Amina",
+            "last_name": "Njeri",
+            "nickname": "amina",
+            "avatar": "/uploads/avatars/amina.png",
+            "email": "amina@example.com",
+            "date_of_birth": "1998-04-12",
+            "about_me": "Weekend hiker and frontend engineer.",
+            "is_public": true
+          }
+        ]
       },
       "UserProfile": {
         "allOf": [
@@ -275,7 +391,10 @@
                 "format": "date"
               },
               "about_me": {
-                "type": ["string", "null"]
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "is_public": {
                 "type": "boolean"
@@ -319,12 +438,67 @@
             }
           }
         ],
-        "description": "A user's complete profile, including signup information, authored posts, followers, and followed users, returned when the requester is allowed to view it."
+        "description": "A user's complete profile, including signup information, authored posts, followers, and followed users, returned when the requester is allowed to view it.",
+        "examples": [
+          {
+            "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+            "first_name": "Amina",
+            "last_name": "Njeri",
+            "nickname": "amina",
+            "avatar": "/uploads/avatars/amina.png",
+            "email": "amina@example.com",
+            "date_of_birth": "1998-04-12",
+            "about_me": "Weekend hiker and frontend engineer.",
+            "is_public": true,
+            "follower_count": 24,
+            "following_count": 18,
+            "posts": [
+              {
+                "id": "8a6de4c1-2f4a-4c52-a38f-61d76c9e7d11",
+                "deleted": false,
+                "author": {
+                  "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                  "first_name": "Amina",
+                  "last_name": "Njeri",
+                  "nickname": "amina",
+                  "avatar": "/uploads/avatars/amina.png"
+                },
+                "group_id": null,
+                "content": "First hike of the season was worth the early alarm.",
+                "image_url": "/uploads/posts/hike.gif",
+                "privacy": "public",
+                "comment_count": 2,
+                "like_count": 14,
+                "dislike_count": 0,
+                "viewer_vote": "like",
+                "created_at": "2026-06-16T08:15:00Z",
+                "updated_at": null
+              }
+            ],
+            "followers": [
+              {
+                "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                "first_name": "Amina",
+                "last_name": "Njeri",
+                "nickname": "amina",
+                "avatar": "/uploads/avatars/amina.png"
+              }
+            ],
+            "following": []
+          }
+        ]
       },
       "ViewerVote": {
         "type": "string",
-        "enum": ["like", "dislike", "none"],
-        "description": "The current user's vote on the resource, or `none` when no vote exists."
+        "enum": [
+          "like",
+          "dislike",
+          "none"
+        ],
+        "description": "The current user's vote on the resource, or `none` when no vote exists.",
+        "examples": [
+          "like"
+        ]
       },
       "Post": {
         "type": "object",
@@ -360,7 +534,10 @@
             "description": "The user who created the post."
           },
           "group_id": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid",
             "description": "The owning group, or null for a profile or home-feed post."
           },
@@ -369,12 +546,19 @@
             "description": "The post's text content."
           },
           "image_url": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "URL of the attached image or GIF, or null when absent."
           },
           "privacy": {
             "type": "string",
-            "enum": ["public", "almost_private", "private"],
+            "enum": [
+              "public",
+              "almost_private",
+              "private"
+            ],
             "description": "Ignored for authorization when group_id is present; accepted group membership is then required."
           },
           "comment_count": {
@@ -402,17 +586,46 @@
             "description": "When the post was created."
           },
           "updated_at": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time",
             "description": "When the post was last edited, or null when never edited."
           }
         },
-        "description": "A visible, active post with author, audience, media, counts, and viewer state."
+        "description": "A visible, active post with author, audience, media, counts, and viewer state.",
+        "examples": [
+          {
+            "id": "8a6de4c1-2f4a-4c52-a38f-61d76c9e7d11",
+            "deleted": false,
+            "author": {
+              "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+              "first_name": "Amina",
+              "last_name": "Njeri",
+              "nickname": "amina",
+              "avatar": "/uploads/avatars/amina.png"
+            },
+            "group_id": null,
+            "content": "First hike of the season was worth the early alarm.",
+            "image_url": "/uploads/posts/hike.gif",
+            "privacy": "public",
+            "comment_count": 2,
+            "like_count": 14,
+            "dislike_count": 0,
+            "viewer_vote": "like",
+            "created_at": "2026-06-16T08:15:00Z",
+            "updated_at": null
+          }
+        ]
       },
       "DeletedPost": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "deleted"],
+        "required": [
+          "id",
+          "deleted"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -425,7 +638,13 @@
             "description": "Always true for a deleted-post tombstone."
           }
         },
-        "description": "The minimal tombstone returned in place of a soft-deleted post."
+        "description": "The minimal tombstone returned in place of a soft-deleted post.",
+        "examples": [
+          {
+            "id": "6ff02ee4-d77a-4ff0-a946-e60e74bb9c53",
+            "deleted": true
+          }
+        ]
       },
       "Comment": {
         "type": "object",
@@ -462,7 +681,10 @@
             "description": "The post containing this comment."
           },
           "parent_comment_id": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid",
             "description": "The parent comment, or null for a top-level comment."
           },
@@ -475,7 +697,10 @@
             "description": "The comment's text content."
           },
           "image_url": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "URL of the attached image or GIF, or null when absent."
           },
           "like_count": {
@@ -498,7 +723,10 @@
             "description": "When the comment was created."
           },
           "updated_at": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time",
             "description": "When the comment was last edited, or null when never edited."
           },
@@ -517,12 +745,39 @@
             "description": "Visible direct replies, recursively including their descendants."
           }
         },
-        "description": "A visible, active comment with recursively nested replies."
+        "description": "A visible, active comment with recursively nested replies.",
+        "examples": [
+          {
+            "id": "a1ac5c54-6cb6-41bc-a88f-55ad4fb3a6d2",
+            "deleted": false,
+            "post_id": "8a6de4c1-2f4a-4c52-a38f-61d76c9e7d11",
+            "parent_comment_id": null,
+            "author": {
+              "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+              "first_name": "Amina",
+              "last_name": "Njeri",
+              "nickname": "amina",
+              "avatar": "/uploads/avatars/amina.png"
+            },
+            "content": "That view is unreal.",
+            "image_url": null,
+            "like_count": 3,
+            "dislike_count": 0,
+            "viewer_vote": "none",
+            "created_at": "2026-06-16T08:22:00Z",
+            "updated_at": null,
+            "replies": []
+          }
+        ]
       },
       "DeletedComment": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "deleted", "replies"],
+        "required": [
+          "id",
+          "deleted",
+          "replies"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -549,12 +804,45 @@
             "description": "Visible replies retained beneath the tombstone."
           }
         },
-        "description": "A minimal comment tombstone that preserves any visible descendants."
+        "description": "A minimal comment tombstone that preserves any visible descendants.",
+        "examples": [
+          {
+            "id": "623b1e60-babc-44db-a4a1-0c3d071a80a3",
+            "deleted": true,
+            "replies": [
+              {
+                "id": "a1ac5c54-6cb6-41bc-a88f-55ad4fb3a6d2",
+                "deleted": false,
+                "post_id": "8a6de4c1-2f4a-4c52-a38f-61d76c9e7d11",
+                "parent_comment_id": null,
+                "author": {
+                  "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                  "first_name": "Amina",
+                  "last_name": "Njeri",
+                  "nickname": "amina",
+                  "avatar": "/uploads/avatars/amina.png"
+                },
+                "content": "That view is unreal.",
+                "image_url": null,
+                "like_count": 3,
+                "dislike_count": 0,
+                "viewer_vote": "none",
+                "created_at": "2026-06-16T08:22:00Z",
+                "updated_at": null,
+                "replies": []
+              }
+            ]
+          }
+        ]
       },
       "VoteResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["like_count", "dislike_count", "viewer_vote"],
+        "required": [
+          "like_count",
+          "dislike_count",
+          "viewer_vote"
+        ],
         "properties": {
           "like_count": {
             "type": "integer",
@@ -571,7 +859,14 @@
             "description": "The current user's resulting vote."
           }
         },
-        "description": "Updated vote totals and the current user's resulting vote."
+        "description": "Updated vote totals and the current user's resulting vote.",
+        "examples": [
+          {
+            "like_count": 15,
+            "dislike_count": 0,
+            "viewer_vote": "like"
+          }
+        ]
       },
       "PostResponse": {
         "description": "A successful response containing an active post or a deleted-post tombstone.",
@@ -581,7 +876,9 @@
           },
           {
             "type": "object",
-            "required": ["data"],
+            "required": [
+              "data"
+            ],
             "properties": {
               "status": {
                 "type": "string",
@@ -601,6 +898,34 @@
               }
             }
           }
+        ],
+        "examples": [
+          {
+            "status": "success",
+            "message": "Post returned.",
+            "data": {
+              "id": "8a6de4c1-2f4a-4c52-a38f-61d76c9e7d11",
+              "deleted": false,
+              "author": {
+                "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                "first_name": "Amina",
+                "last_name": "Njeri",
+                "nickname": "amina",
+                "avatar": "/uploads/avatars/amina.png"
+              },
+              "group_id": null,
+              "content": "First hike of the season was worth the early alarm.",
+              "image_url": "/uploads/posts/hike.gif",
+              "privacy": "public",
+              "comment_count": 2,
+              "like_count": 14,
+              "dislike_count": 0,
+              "viewer_vote": "like",
+              "created_at": "2026-06-16T08:15:00Z",
+              "updated_at": null
+            },
+            "errors": null
+          }
         ]
       },
       "CommentResponse": {
@@ -611,7 +936,9 @@
           },
           {
             "type": "object",
-            "required": ["data"],
+            "required": [
+              "data"
+            ],
             "properties": {
               "status": {
                 "type": "string",
@@ -631,6 +958,34 @@
               }
             }
           }
+        ],
+        "examples": [
+          {
+            "status": "success",
+            "message": "Comment returned.",
+            "data": {
+              "id": "a1ac5c54-6cb6-41bc-a88f-55ad4fb3a6d2",
+              "deleted": false,
+              "post_id": "8a6de4c1-2f4a-4c52-a38f-61d76c9e7d11",
+              "parent_comment_id": null,
+              "author": {
+                "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                "first_name": "Amina",
+                "last_name": "Njeri",
+                "nickname": "amina",
+                "avatar": "/uploads/avatars/amina.png"
+              },
+              "content": "That view is unreal.",
+              "image_url": null,
+              "like_count": 3,
+              "dislike_count": 0,
+              "viewer_vote": "none",
+              "created_at": "2026-06-16T08:22:00Z",
+              "updated_at": null,
+              "replies": []
+            },
+            "errors": null
+          }
         ]
       },
       "PostListResponse": {
@@ -641,7 +996,10 @@
           },
           {
             "type": "object",
-            "required": ["data", "pagination"],
+            "required": [
+              "data",
+              "pagination"
+            ],
             "properties": {
               "status": {
                 "type": "string",
@@ -668,6 +1026,45 @@
               }
             }
           }
+        ],
+        "examples": [
+          {
+            "status": "success",
+            "message": "Posts returned.",
+            "data": [
+              {
+                "id": "8a6de4c1-2f4a-4c52-a38f-61d76c9e7d11",
+                "deleted": false,
+                "author": {
+                  "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                  "first_name": "Amina",
+                  "last_name": "Njeri",
+                  "nickname": "amina",
+                  "avatar": "/uploads/avatars/amina.png"
+                },
+                "group_id": null,
+                "content": "First hike of the season was worth the early alarm.",
+                "image_url": "/uploads/posts/hike.gif",
+                "privacy": "public",
+                "comment_count": 2,
+                "like_count": 14,
+                "dislike_count": 0,
+                "viewer_vote": "like",
+                "created_at": "2026-06-16T08:15:00Z",
+                "updated_at": null
+              },
+              {
+                "id": "6ff02ee4-d77a-4ff0-a946-e60e74bb9c53",
+                "deleted": true
+              }
+            ],
+            "errors": null,
+            "pagination": {
+              "limit": 20,
+              "offset": 0,
+              "has_more": false
+            }
+          }
         ]
       },
       "CommentListResponse": {
@@ -678,7 +1075,10 @@
           },
           {
             "type": "object",
-            "required": ["data", "pagination"],
+            "required": [
+              "data",
+              "pagination"
+            ],
             "properties": {
               "status": {
                 "type": "string",
@@ -705,12 +1105,51 @@
               }
             }
           }
+        ],
+        "examples": [
+          {
+            "status": "success",
+            "message": "Comments returned.",
+            "data": [
+              {
+                "id": "a1ac5c54-6cb6-41bc-a88f-55ad4fb3a6d2",
+                "deleted": false,
+                "post_id": "8a6de4c1-2f4a-4c52-a38f-61d76c9e7d11",
+                "parent_comment_id": null,
+                "author": {
+                  "id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                  "first_name": "Amina",
+                  "last_name": "Njeri",
+                  "nickname": "amina",
+                  "avatar": "/uploads/avatars/amina.png"
+                },
+                "content": "That view is unreal.",
+                "image_url": null,
+                "like_count": 3,
+                "dislike_count": 0,
+                "viewer_vote": "none",
+                "created_at": "2026-06-16T08:22:00Z",
+                "updated_at": null,
+                "replies": []
+              }
+            ],
+            "errors": null,
+            "pagination": {
+              "limit": 20,
+              "offset": 0,
+              "has_more": false
+            }
+          }
         ]
       },
       "Pagination": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["limit", "offset", "has_more"],
+        "required": [
+          "limit",
+          "offset",
+          "has_more"
+        ],
         "properties": {
           "limit": {
             "type": "integer",
@@ -727,7 +1166,480 @@
             "description": "Whether another page is available."
           }
         },
-        "description": "Offset-based pagination metadata for a collection response."
+        "description": "Offset-based pagination metadata for a collection response.",
+        "examples": [
+          {
+            "limit": 20,
+            "offset": 0,
+            "has_more": false
+          }
+        ]
+      },
+      "Group": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "creator_id",
+          "title",
+          "description",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The group unique identifier from the groups table."
+          },
+          "creator_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The user that created the group, or null if that account was deleted."
+          },
+          "title": {
+            "type": "string",
+            "description": "The group title."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The group description or null when none was supplied."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the group was created."
+          }
+        },
+        "description": "A social group record. The fields mirror the groups table in schema.dbml.",
+        "examples": [
+          {
+            "id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+            "creator_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+            "title": "Nairobi Weekend Hikers",
+            "description": "Planning easy hikes and photo walks around Nairobi.",
+            "created_at": "2026-06-15T12:00:00Z"
+          }
+        ]
+      },
+      "GroupListResponse": {
+        "description": "A paginated response envelope containing groups visible to the authenticated user.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Response"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data",
+              "pagination"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "success",
+                "description": "Indicates that the request completed successfully."
+              },
+              "data": {
+                "type": "array",
+                "description": "Groups ordered by recent creation or server-defined browse ranking.",
+                "items": {
+                  "$ref": "#/components/schemas/Group"
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination",
+                "description": "Pagination state for this page of groups."
+              }
+            }
+          }
+        ],
+        "examples": [
+          {
+            "status": "success",
+            "message": "Groups returned.",
+            "data": [
+              {
+                "id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+                "creator_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                "title": "Nairobi Weekend Hikers",
+                "description": "Planning easy hikes and photo walks around Nairobi.",
+                "created_at": "2026-06-15T12:00:00Z"
+              }
+            ],
+            "errors": null,
+            "pagination": {
+              "limit": 20,
+              "offset": 0,
+              "has_more": false
+            }
+          }
+        ]
+      },
+      "Event": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "group_id",
+          "creator_id",
+          "title",
+          "description",
+          "event_date",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The event unique identifier from the events table."
+          },
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The group that owns this event."
+          },
+          "creator_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The user that created the event, or null if that account was deleted."
+          },
+          "title": {
+            "type": "string",
+            "description": "The event title."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The event description or null when none was supplied."
+          },
+          "event_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the event is scheduled to happen."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the event record was created."
+          }
+        },
+        "description": "A group event record. The fields mirror the events table in schema.dbml.",
+        "examples": [
+          {
+            "id": "42af8331-3a1e-4c16-9fb9-e9cb91c7b57f",
+            "group_id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+            "creator_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+            "title": "Karura Forest Saturday Walk",
+            "description": "Meet at Gate A, bring water and comfortable shoes.",
+            "event_date": "2026-06-20T07:30:00Z",
+            "created_at": "2026-06-16T09:00:00Z"
+          }
+        ]
+      },
+      "EventListResponse": {
+        "description": "A paginated response envelope containing events for a group.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Response"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data",
+              "pagination"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "success",
+                "description": "Indicates that the request completed successfully."
+              },
+              "data": {
+                "type": "array",
+                "description": "Events ordered by event date.",
+                "items": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination",
+                "description": "Pagination state for this page of events."
+              }
+            }
+          }
+        ],
+        "examples": [
+          {
+            "status": "success",
+            "message": "Events returned.",
+            "data": [
+              {
+                "id": "42af8331-3a1e-4c16-9fb9-e9cb91c7b57f",
+                "group_id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+                "creator_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                "title": "Karura Forest Saturday Walk",
+                "description": "Meet at Gate A, bring water and comfortable shoes.",
+                "event_date": "2026-06-20T07:30:00Z",
+                "created_at": "2026-06-16T09:00:00Z"
+              }
+            ],
+            "errors": null,
+            "pagination": {
+              "limit": 20,
+              "offset": 0,
+              "has_more": false
+            }
+          }
+        ]
+      },
+      "Message": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "sender_id",
+          "dm_thread_id",
+          "group_id",
+          "content",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The message unique identifier from the messages table."
+          },
+          "sender_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The user that sent the message."
+          },
+          "dm_thread_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The direct-message thread for a DM message, or null for a group message."
+          },
+          "group_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The group for a group chat message, or null for a direct message."
+          },
+          "content": {
+            "type": "string",
+            "description": "The message body."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the message was sent."
+          }
+        },
+        "description": "A direct-message or group-message record. Exactly one of dm_thread_id or group_id is set.",
+        "examples": [
+          {
+            "id": "8f7cc247-bc4d-4572-8b5a-22248f97ab48",
+            "sender_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+            "dm_thread_id": "f9b81580-91f1-42ef-b0c9-f9170587d57c",
+            "group_id": null,
+            "content": "Hey, are you joining the walk this weekend?",
+            "created_at": "2026-06-16T09:15:00Z"
+          },
+          {
+            "id": "bf1cc38b-502a-4a7b-b3e9-33a1352cab8f",
+            "sender_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+            "dm_thread_id": null,
+            "group_id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+            "content": "See everyone at Gate A.",
+            "created_at": "2026-06-16T09:15:00Z"
+          }
+        ]
+      },
+      "MessageListResponse": {
+        "description": "A paginated response envelope containing chat messages ordered oldest to newest for rendering history.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Response"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data",
+              "pagination"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "success",
+                "description": "Indicates that the request completed successfully."
+              },
+              "data": {
+                "type": "array",
+                "description": "Messages in chronological order.",
+                "items": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination",
+                "description": "Pagination state for this page of messages."
+              }
+            }
+          }
+        ],
+        "examples": [
+          {
+            "status": "success",
+            "message": "Messages returned.",
+            "data": [
+              {
+                "id": "8f7cc247-bc4d-4572-8b5a-22248f97ab48",
+                "sender_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                "dm_thread_id": "f9b81580-91f1-42ef-b0c9-f9170587d57c",
+                "group_id": null,
+                "content": "Hey, are you joining the walk this weekend?",
+                "created_at": "2026-06-16T09:15:00Z"
+              }
+            ],
+            "errors": null,
+            "pagination": {
+              "limit": 20,
+              "offset": 0,
+              "has_more": false
+            }
+          }
+        ]
+      },
+      "Notification": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "user_id",
+          "type",
+          "source_id",
+          "is_read",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The notification unique identifier from the notifications table."
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The user who receives the notification."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "follow_request",
+              "group_invite",
+              "event_invite",
+              "group_request",
+              "event_created"
+            ],
+            "description": "The notification type stored in schema.dbml."
+          },
+          "source_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The source entity for this notification. Its meaning depends on the type."
+          },
+          "is_read": {
+            "type": "boolean",
+            "description": "Whether the recipient has marked this notification as read."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the notification was created."
+          }
+        },
+        "description": "A notification record for follow requests, group invitations, event invitations, group join requests, and created events.",
+        "examples": [
+          {
+            "id": "b4dfcf9c-d761-48a2-9851-8b79974c9e20",
+            "user_id": "d35e1f5e-86b4-4baf-bec7-f6f8a08fcb85",
+            "type": "follow_request",
+            "source_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+            "is_read": false,
+            "created_at": "2026-06-16T09:20:00Z"
+          }
+        ]
+      },
+      "NotificationListResponse": {
+        "description": "A paginated response envelope containing notifications for the authenticated user.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Response"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data",
+              "pagination"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "success",
+                "description": "Indicates that the request completed successfully."
+              },
+              "data": {
+                "type": "array",
+                "description": "Notifications ordered newest first.",
+                "items": {
+                  "$ref": "#/components/schemas/Notification"
+                }
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination",
+                "description": "Pagination state for this page of notifications."
+              }
+            }
+          }
+        ],
+        "examples": [
+          {
+            "status": "success",
+            "message": "Notifications returned.",
+            "data": [
+              {
+                "id": "b4dfcf9c-d761-48a2-9851-8b79974c9e20",
+                "user_id": "d35e1f5e-86b4-4baf-bec7-f6f8a08fcb85",
+                "type": "follow_request",
+                "source_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                "is_read": false,
+                "created_at": "2026-06-16T09:20:00Z"
+              }
+            ],
+            "errors": null,
+            "pagination": {
+              "limit": 20,
+              "offset": 0,
+              "has_more": false
+            }
+          }
+        ]
       }
     },
     "parameters": {
@@ -915,7 +1827,9 @@
   "paths": {
     "/users": {
       "get": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Get all users / Search users",
         "parameters": [
           {
@@ -958,7 +1872,9 @@
         }
       ],
       "get": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Get a user's profile",
         "security": [
           {
@@ -994,7 +1910,10 @@
     },
     "/users/me/comments": {
       "get": {
-        "tags": ["Users", "Comments"],
+        "tags": [
+          "Users",
+          "Comments"
+        ],
         "summary": "Get all comments made by the authenticated user",
         "security": [
           {
@@ -1044,7 +1963,9 @@
         }
       ],
       "get": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Get a user's followers",
         "responses": {
           "200": {
@@ -1067,7 +1988,9 @@
         }
       ],
       "get": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Get users followed by this user",
         "responses": {
           "200": {
@@ -1090,7 +2013,9 @@
         }
       ],
       "post": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Follow a user",
         "security": [
           {
@@ -1105,7 +2030,9 @@
         "description": "Follows a public profile immediately or creates a pending request for a private profile."
       },
       "delete": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Unfollow a user or cancel follow request",
         "security": [
           {
@@ -1122,7 +2049,9 @@
     },
     "/chats": {
       "get": {
-        "tags": ["Chats"],
+        "tags": [
+          "Chats"
+        ],
         "summary": "Get all active chat rooms",
         "description": "Returns a list of all DMs and Group chats the user is part of, sorted by recent activity.",
         "security": [
@@ -1153,7 +2082,9 @@
     },
     "/chats/dm": {
       "post": {
-        "tags": ["Chats"],
+        "tags": [
+          "Chats"
+        ],
         "summary": "Open a direct message with a user",
         "description": "Creates or retrieves an existing DM thread with the target user.",
         "security": [
@@ -1167,7 +2098,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["target_user_id"],
+                "required": [
+                  "target_user_id"
+                ],
                 "properties": {
                   "target_user_id": {
                     "type": "string",
@@ -1198,7 +2131,9 @@
         }
       ],
       "post": {
-        "tags": ["Groups"],
+        "tags": [
+          "Groups"
+        ],
         "summary": "Invite a user to a group",
         "security": [
           {
@@ -1242,7 +2177,9 @@
         }
       ],
       "post": {
-        "tags": ["Groups"],
+        "tags": [
+          "Groups"
+        ],
         "summary": "Invite a user to an event",
         "security": [
           {
@@ -1259,7 +2196,9 @@
     },
     "/users/register": {
       "post": {
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Register a user",
         "requestBody": {
           "required": true,
@@ -1294,13 +2233,22 @@
                     "format": "date"
                   },
                   "avatar": {
-                    "type": ["string", "null"]
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "nickname": {
-                    "type": ["string", "null"]
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "about_me": {
-                    "type": ["string", "null"]
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "is_public": {
                     "type": "boolean",
@@ -1327,7 +2275,9 @@
     },
     "/users/login": {
       "post": {
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Create a session",
         "requestBody": {
           "required": true,
@@ -1335,7 +2285,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email", "password"],
+                "required": [
+                  "email",
+                  "password"
+                ],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -1365,7 +2318,9 @@
     },
     "/users/logout": {
       "post": {
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Delete the current session",
         "responses": {
           "200": {
@@ -1377,7 +2332,9 @@
     },
     "/users/me": {
       "get": {
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Get the current user",
         "security": [
           {
@@ -1400,6 +2357,160 @@
           }
         },
         "description": "Returns the authenticated user's complete profile and account settings."
+      },
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Update the current user's profile",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "current_password": {
+                    "type": "string",
+                    "description": "Required when changing the email address or password."
+                  },
+                  "new_password": {
+                    "type": "string",
+                    "minLength": 8
+                  },
+                  "first_name": {
+                    "type": "string"
+                  },
+                  "last_name": {
+                    "type": "string"
+                  },
+                  "date_of_birth": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "nickname": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "The optional username or display name."
+                  },
+                  "about_me": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "is_public": {
+                    "type": "boolean"
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Replacement JPEG, PNG, or GIF avatar."
+                  },
+                  "remove_avatar": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Removes the current avatar when true. Cannot be combined with avatar."
+                  }
+                },
+                "minProperties": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated current user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        },
+        "description": "Updates any supplied account or profile fields. At least one field is required; changing email or password requires the current password."
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Delete the current user's account",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "password"
+                ],
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "description": "The current password used to confirm permanent account deletion."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account deleted and session cookie cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "description": "Permanently deletes the account in one transaction. Authored posts and comments are soft-deleted first and remain as tombstones; memberships, follows, sessions, votes, invitations, direct-message threads, messages, and notifications are removed. Groups and events created by the user remain without a creator."
       }
     },
     "/users/{id}/posts": {
@@ -1415,7 +2526,10 @@
         }
       ],
       "get": {
-        "tags": ["Users", "Posts"],
+        "tags": [
+          "Users",
+          "Posts"
+        ],
         "summary": "Get posts visible on a user's profile",
         "security": [
           {
@@ -1451,7 +2565,9 @@
     },
     "/posts": {
       "get": {
-        "tags": ["Posts"],
+        "tags": [
+          "Posts"
+        ],
         "summary": "Get the home feed or a group feed",
         "description": "Without group_id, excludes group posts and applies ordinary privacy. With group_id, requires accepted membership and returns only that group's posts.",
         "security": [
@@ -1500,7 +2616,9 @@
         }
       },
       "post": {
-        "tags": ["Posts"],
+        "tags": [
+          "Posts"
+        ],
         "summary": "Create a post",
         "security": [
           {
@@ -1519,11 +2637,18 @@
                   },
                   "privacy": {
                     "type": "string",
-                    "enum": ["public", "almost_private", "private"],
+                    "enum": [
+                      "public",
+                      "almost_private",
+                      "private"
+                    ],
                     "default": "public"
                   },
                   "group_id": {
-                    "type": ["string", "null"],
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "format": "uuid"
                   },
                   "audience_ids": {
@@ -1535,17 +2660,24 @@
                     "description": "Repeat the audience_ids form field for each selected accepted follower."
                   },
                   "image": {
-                    "type": ["string", "null"],
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "format": "binary",
                     "description": "Optional JPEG, PNG, or GIF up to 5 MiB."
                   }
                 },
                 "anyOf": [
                   {
-                    "required": ["content"]
+                    "required": [
+                      "content"
+                    ]
                   },
                   {
-                    "required": ["image"]
+                    "required": [
+                      "image"
+                    ]
                   }
                 ]
               }
@@ -1586,7 +2718,9 @@
         }
       ],
       "get": {
-        "tags": ["Posts"],
+        "tags": [
+          "Posts"
+        ],
         "summary": "Get a visible post or its tombstone",
         "security": [
           {
@@ -1620,7 +2754,9 @@
         "description": "Returns the post when visible, using a minimal tombstone if it has been soft-deleted."
       },
       "patch": {
-        "tags": ["Posts"],
+        "tags": [
+          "Posts"
+        ],
         "summary": "Edit an active post as its author",
         "security": [
           {
@@ -1639,7 +2775,11 @@
                   },
                   "privacy": {
                     "type": "string",
-                    "enum": ["public", "almost_private", "private"]
+                    "enum": [
+                      "public",
+                      "almost_private",
+                      "private"
+                    ]
                   },
                   "audience_ids": {
                     "type": "array",
@@ -1649,7 +2789,10 @@
                     }
                   },
                   "image": {
-                    "type": ["string", "null"],
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "format": "binary"
                   },
                   "remove_image": {
@@ -1695,7 +2838,9 @@
         "description": "Updates the mutable content, media, and audience fields of the author's active post."
       },
       "delete": {
-        "tags": ["Posts"],
+        "tags": [
+          "Posts"
+        ],
         "summary": "Soft-delete a post as its author",
         "description": "Idempotent. Comments remain readable to users authorized by the retained post visibility data, but the deleted post accepts no new comments or votes.",
         "security": [
@@ -1742,7 +2887,9 @@
         }
       ],
       "get": {
-        "tags": ["Comments"],
+        "tags": [
+          "Comments"
+        ],
         "summary": "Get paginated top-level comments with all descendants",
         "description": "Includes minimal comment tombstones. Authorized users may read historical comments after post deletion.",
         "security": [
@@ -1776,7 +2923,9 @@
         }
       },
       "post": {
-        "tags": ["Comments"],
+        "tags": [
+          "Comments"
+        ],
         "summary": "Create a comment or reply on an active post",
         "security": [
           {
@@ -1794,20 +2943,30 @@
                     "type": "string"
                   },
                   "parent_comment_id": {
-                    "type": ["string", "null"],
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "format": "uuid"
                   },
                   "image": {
-                    "type": ["string", "null"],
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "format": "binary"
                   }
                 },
                 "anyOf": [
                   {
-                    "required": ["content"]
+                    "required": [
+                      "content"
+                    ]
                   },
                   {
-                    "required": ["image"]
+                    "required": [
+                      "image"
+                    ]
                   }
                 ]
               }
@@ -1875,7 +3034,9 @@
         }
       ],
       "put": {
-        "tags": ["Votes"],
+        "tags": [
+          "Votes"
+        ],
         "summary": "Set or switch the current user's post vote",
         "security": [
           {
@@ -1889,11 +3050,16 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["vote"],
+                "required": [
+                  "vote"
+                ],
                 "properties": {
                   "vote": {
                     "type": "string",
-                    "enum": ["like", "dislike"]
+                    "enum": [
+                      "like",
+                      "dislike"
+                    ]
                   }
                 }
               }
@@ -1930,7 +3096,9 @@
         "description": "Creates or replaces the current user's mutually exclusive like or dislike vote."
       },
       "delete": {
-        "tags": ["Votes"],
+        "tags": [
+          "Votes"
+        ],
         "summary": "Remove the current user's post vote",
         "security": [
           {
@@ -1974,7 +3142,9 @@
         }
       ],
       "patch": {
-        "tags": ["Comments"],
+        "tags": [
+          "Comments"
+        ],
         "summary": "Edit an active comment as its author",
         "security": [
           {
@@ -1992,7 +3162,10 @@
                     "type": "string"
                   },
                   "image": {
-                    "type": ["string", "null"],
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "format": "binary"
                   },
                   "remove_image": {
@@ -2038,7 +3211,9 @@
         "description": "Updates the text or media of the author's active comment."
       },
       "delete": {
-        "tags": ["Comments"],
+        "tags": [
+          "Comments"
+        ],
         "summary": "Soft-delete a comment",
         "description": "Allowed for the comment author or parent post author. Idempotent and preserves descendants.",
         "security": [
@@ -2079,7 +3254,9 @@
         }
       ],
       "put": {
-        "tags": ["Votes"],
+        "tags": [
+          "Votes"
+        ],
         "summary": "Set or switch the current user's comment vote",
         "security": [
           {
@@ -2093,11 +3270,16 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["vote"],
+                "required": [
+                  "vote"
+                ],
                 "properties": {
                   "vote": {
                     "type": "string",
-                    "enum": ["like", "dislike"]
+                    "enum": [
+                      "like",
+                      "dislike"
+                    ]
                   }
                 }
               }
@@ -2134,7 +3316,9 @@
         "description": "Creates or replaces the current user's mutually exclusive like or dislike vote."
       },
       "delete": {
-        "tags": ["Votes"],
+        "tags": [
+          "Votes"
+        ],
         "summary": "Remove the current user's comment vote",
         "security": [
           {
@@ -2169,6 +3353,1077 @@
           }
         },
         "description": "Removes the current user's vote and returns the updated totals."
+      }
+    },
+    "/groups": {
+      "get": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Browse groups",
+        "description": "Returns groups available to the authenticated user for discovery. The response uses offset pagination and returns records that align with the groups table: id, creator_id, title, description, and created_at.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated groups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupListResponse"
+                },
+                "examples": {
+                  "groups": {
+                    "value": {
+                      "status": "success",
+                      "message": "Groups returned.",
+                      "data": [
+                        {
+                          "id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+                          "creator_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                          "title": "Nairobi Weekend Hikers",
+                          "description": "Planning easy hikes and photo walks around Nairobi.",
+                          "created_at": "2026-06-15T12:00:00Z"
+                        }
+                      ],
+                      "errors": null,
+                      "pagination": {
+                        "limit": 20,
+                        "offset": 0,
+                        "has_more": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Create a group",
+        "description": "Creates a new group owned by the authenticated user and adds that user as an accepted group member. Title is required; description may be null or an empty string depending on frontend UX.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "title",
+                  "description"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Human-readable group name."
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "What the group is for."
+                  }
+                }
+              },
+              "examples": {
+                "createGroup": {
+                  "value": {
+                    "title": "Nairobi Weekend Hikers",
+                    "description": "Planning easy hikes and photo walks around Nairobi."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Group"
+                },
+                "examples": {
+                  "group": {
+                    "value": {
+                      "id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+                      "creator_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                      "title": "Nairobi Weekend Hikers",
+                      "description": "Planning easy hikes and photo walks around Nairobi.",
+                      "created_at": "2026-06-15T12:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/groups/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Get group details",
+        "description": "Returns a single group by id. Use this endpoint when opening a group page before fetching its posts, events, members, or chat history.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Group"
+                },
+                "examples": {
+                  "group": {
+                    "value": {
+                      "id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+                      "creator_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                      "title": "Nairobi Weekend Hikers",
+                      "description": "Planning easy hikes and photo walks around Nairobi.",
+                      "created_at": "2026-06-15T12:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/groups/{id}/join": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Request to join a group",
+        "description": "Creates a pending_request row in group_members for the authenticated user. If the user already has an invite, the backend may accept the membership immediately instead of creating a second pending row.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Join request submitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                },
+                "examples": {
+                  "pendingRequest": {
+                    "value": {
+                      "status": "success",
+                      "message": "Join request submitted.",
+                      "data": {
+                        "group_id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+                        "user_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                        "status": "pending_request"
+                      },
+                      "errors": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/groups/{id}/members/{user_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        },
+        {
+          "name": "user_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "The member or pending member to update."
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Resolve a group membership request or invite",
+        "description": "Allows a group creator to accept or reject a pending_request, and allows an invited user to accept or decline their own pending_invite. Accepted memberships use the accepted status from schema.dbml; rejected or declined memberships are removed.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "action"
+                ],
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "accept",
+                      "reject"
+                    ],
+                    "description": "accept stores status accepted; reject removes the pending membership row."
+                  }
+                }
+              },
+              "examples": {
+                "acceptMember": {
+                  "value": {
+                    "action": "accept"
+                  }
+                },
+                "rejectMember": {
+                  "value": {
+                    "action": "reject"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Membership updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                },
+                "examples": {
+                  "accepted": {
+                    "value": {
+                      "status": "success",
+                      "message": "Membership accepted.",
+                      "data": {
+                        "group_id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+                        "user_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                        "status": "accepted"
+                      },
+                      "errors": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Remove a group member",
+        "description": "Removes a user from group_members. Group owners or admins use this to kick a member out; a backend may also allow the authenticated user to leave by targeting their own user_id.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                },
+                "examples": {
+                  "removed": {
+                    "value": {
+                      "status": "success",
+                      "message": "Member removed from group.",
+                      "data": {
+                        "group_id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+                        "user_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1"
+                      },
+                      "errors": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/groups/{group_id}/events": {
+      "parameters": [
+        {
+          "name": "group_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "The group that owns the events."
+        }
+      ],
+      "get": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "List group events",
+        "description": "Returns events for a group visible to the authenticated user. Event records align with the events table and are usually ordered by upcoming event_date first.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventListResponse"
+                },
+                "examples": {
+                  "events": {
+                    "value": {
+                      "status": "success",
+                      "message": "Events returned.",
+                      "data": [
+                        {
+                          "id": "42af8331-3a1e-4c16-9fb9-e9cb91c7b57f",
+                          "group_id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+                          "creator_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                          "title": "Karura Forest Saturday Walk",
+                          "description": "Meet at Gate A, bring water and comfortable shoes.",
+                          "event_date": "2026-06-20T07:30:00Z",
+                          "created_at": "2026-06-16T09:00:00Z"
+                        }
+                      ],
+                      "errors": null,
+                      "pagination": {
+                        "limit": 20,
+                        "offset": 0,
+                        "has_more": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Create a group event",
+        "description": "Creates an event within a group. The authenticated user must be an accepted group member. The created event uses the group_id path parameter and the authenticated user as creator_id.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "title",
+                  "description",
+                  "event_date"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Event title."
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Event details."
+                  },
+                  "event_date": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Scheduled event date and time."
+                  }
+                }
+              },
+              "examples": {
+                "createEvent": {
+                  "value": {
+                    "title": "Karura Forest Saturday Walk",
+                    "description": "Meet at Gate A, bring water and comfortable shoes.",
+                    "event_date": "2026-06-20T07:30:00Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                },
+                "examples": {
+                  "event": {
+                    "value": {
+                      "id": "42af8331-3a1e-4c16-9fb9-e9cb91c7b57f",
+                      "group_id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+                      "creator_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                      "title": "Karura Forest Saturday Walk",
+                      "description": "Meet at Gate A, bring water and comfortable shoes.",
+                      "event_date": "2026-06-20T07:30:00Z",
+                      "created_at": "2026-06-16T09:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/events/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Get event details",
+        "description": "Returns a single event by id. The requester must be allowed to view the owning group.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                },
+                "examples": {
+                  "event": {
+                    "value": {
+                      "id": "42af8331-3a1e-4c16-9fb9-e9cb91c7b57f",
+                      "group_id": "b7d7a527-b0f7-4c1d-9d65-9d840c7ff63e",
+                      "creator_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                      "title": "Karura Forest Saturday Walk",
+                      "description": "Meet at Gate A, bring water and comfortable shoes.",
+                      "event_date": "2026-06-20T07:30:00Z",
+                      "created_at": "2026-06-16T09:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/events/{id}/rsvp": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "RSVP to an event",
+        "description": "Creates or updates the authenticated user's row in event_rsvps. Only accepted group members may RSVP, and the status must be going or not_going.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "going",
+                      "not_going"
+                    ],
+                    "description": "The RSVP status to store."
+                  }
+                }
+              },
+              "examples": {
+                "going": {
+                  "value": {
+                    "status": "going"
+                  }
+                },
+                "notGoing": {
+                  "value": {
+                    "status": "not_going"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "RSVP recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                },
+                "examples": {
+                  "rsvp": {
+                    "value": {
+                      "status": "success",
+                      "message": "RSVP recorded.",
+                      "data": {
+                        "event_id": "42af8331-3a1e-4c16-9fb9-e9cb91c7b57f",
+                        "user_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                        "status": "going"
+                      },
+                      "errors": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      }
+    },
+    "/chats/{id}/messages": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        },
+        {
+          "$ref": "#/components/parameters/Limit"
+        },
+        {
+          "$ref": "#/components/parameters/Offset"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Chats"
+        ],
+        "summary": "Fetch chat message history",
+        "description": "Returns paginated message history for a direct-message thread or group chat room. For DM rooms, id is the dm_threads.id. For group chats, id is the groups.id. Only participants may read history.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageListResponse"
+                },
+                "examples": {
+                  "messages": {
+                    "value": {
+                      "status": "success",
+                      "message": "Messages returned.",
+                      "data": [
+                        {
+                          "id": "8f7cc247-bc4d-4572-8b5a-22248f97ab48",
+                          "sender_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                          "dm_thread_id": "f9b81580-91f1-42ef-b0c9-f9170587d57c",
+                          "group_id": null,
+                          "content": "Hey, are you joining the walk this weekend?",
+                          "created_at": "2026-06-16T09:15:00Z"
+                        }
+                      ],
+                      "errors": null,
+                      "pagination": {
+                        "limit": 20,
+                        "offset": 0,
+                        "has_more": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/ws": {
+      "get": {
+        "tags": [
+          "Realtime"
+        ],
+        "summary": "Open the realtime WebSocket connection",
+        "description": "Upgrades an authenticated HTTP request to a WebSocket connection. The session_token cookie authenticates the user. Client-to-server payloads use JSON, for example `{ \"type\": \"message.send\", \"chat_id\": \"f9b81580-91f1-42ef-b0c9-f9170587d57c\", \"content\": \"Hello\" }`. Server-to-client message events look like `{ \"type\": \"message.created\", \"data\": <Message> }`; notification events look like `{ \"type\": \"notification.created\", \"data\": <Notification> }`; read receipts may use `{ \"type\": \"notification.read\", \"data\": { \"id\": \"b4dfcf9c-d761-48a2-9851-8b79974c9e20\" } }`. REST endpoints remain the source of truth for pagination and recovery after reconnects.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "WebSocket protocol upgrade accepted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Fetch recent notifications",
+        "description": "Returns the authenticated user's notifications ordered newest first. Each notification mirrors the notifications table and uses source_id to point at the related user, group, event, or request source.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Offset"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated notifications",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationListResponse"
+                },
+                "examples": {
+                  "notifications": {
+                    "value": {
+                      "status": "success",
+                      "message": "Notifications returned.",
+                      "data": [
+                        {
+                          "id": "b4dfcf9c-d761-48a2-9851-8b79974c9e20",
+                          "user_id": "d35e1f5e-86b4-4baf-bec7-f6f8a08fcb85",
+                          "type": "follow_request",
+                          "source_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                          "is_read": false,
+                          "created_at": "2026-06-16T09:20:00Z"
+                        }
+                      ],
+                      "errors": null,
+                      "pagination": {
+                        "limit": 20,
+                        "offset": 0,
+                        "has_more": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/notifications/{id}/read": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Mark a notification as read",
+        "description": "Sets is_read to true for one notification owned by the authenticated user and returns the updated notification record.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notification marked read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notification"
+                },
+                "examples": {
+                  "notification": {
+                    "value": {
+                      "id": "b4dfcf9c-d761-48a2-9851-8b79974c9e20",
+                      "user_id": "d35e1f5e-86b4-4baf-bec7-f6f8a08fcb85",
+                      "type": "follow_request",
+                      "source_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                      "is_read": true,
+                      "created_at": "2026-06-16T09:20:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/users/me/followers/{follower_id}": {
+      "parameters": [
+        {
+          "name": "follower_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "The user who follows the authenticated user or sent a pending follow request."
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Accept an incoming follow request",
+        "description": "Accepts a pending follower request by changing the followers row from pending to accepted. The authenticated user is the followee; follower_id identifies the requester.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Follow request accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                },
+                "examples": {
+                  "accepted": {
+                    "value": {
+                      "status": "success",
+                      "message": "Follow request accepted.",
+                      "data": {
+                        "follower_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                        "followee_id": "d35e1f5e-86b4-4baf-bec7-f6f8a08fcb85",
+                        "status": "accepted"
+                      },
+                      "errors": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Decline a follow request or remove a follower",
+        "description": "Deletes the followers row where follower_id is the requester/follower and the authenticated user is the followee. This declines pending requests and also removes an already accepted follower.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Follower relationship removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                },
+                "examples": {
+                  "removed": {
+                    "value": {
+                      "status": "success",
+                      "message": "Follower relationship removed.",
+                      "data": {
+                        "follower_id": "6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1",
+                        "followee_id": "d35e1f5e-86b4-4baf-bec7-f6f8a08fcb85"
+                      },
+                      "errors": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
       }
     }
   }
