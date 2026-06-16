@@ -93,13 +93,13 @@ func TestMapCommentTreeTombstoneOmitsRetainedDataAndKeepsReplies(t *testing.T) {
 	tree, err := MapCommentTree([]*CommentWithAuthor{
 		{
 			Comment: Comment{
-				ID:          parentID,
-				PostID:      postID,
-				UserID:      &authorID,
-				Content:     "retained comment that must not leak",
-				LikeCount:   3,
-				CreatedAt:   time.Date(2026, 6, 16, 8, 20, 0, 0, time.UTC),
-				DeletedAt:   &deletedAt,
+				ID:           parentID,
+				PostID:       postID,
+				UserID:       &authorID,
+				Content:      "retained comment that must not leak",
+				LikeCount:    3,
+				CreatedAt:    time.Date(2026, 6, 16, 8, 20, 0, 0, time.UTC),
+				DeletedAt:    &deletedAt,
 				DislikeCount: 1,
 			},
 			Author: &PublicUser{
