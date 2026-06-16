@@ -4,6 +4,7 @@
   grid-template-rows: auto 1fr auto;
   height: calc(100dvh);
   width: calc(100%);
+  background: rgba(239, 240, 247, 0.726);
 }
 
 .sidebar {

@@ -6,12 +6,12 @@ import "../styles/home.css";
 import UpcomingEvent from "../components/UpcomingEvent.jsx";
 
 function Home() {
-  const posts = [];
+  const Allposts = posts;
 
   return (
     <div className="home-container">
       <div className="posts">
-        {posts.map((it, idx) => {
+        {Allposts?.map((it, idx) => {
           return <Post key={idx} post={it} />;
         })}
       </div>

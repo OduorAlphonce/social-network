@@ -2,10 +2,14 @@ import { useState } from "react";
 import "../styles/post.css";
 import { Dislike, Like } from "./Reactions";
 import avatar from "../assets/user.svg";
+import { MdPublic } from "react-icons/md";
+import { useNavigate } from "react-router";
 
 const Post = ({ post }) => {
   const [likePost, setLikePost] = useState(false);
   const [dislikePost, setDislikePost] = useState(false);
+
+  const navigate = useNavigate();
 
   function like() {
     setDislikePost(false);
@@ -17,18 +21,75 @@ const Post = ({ post }) => {
     setDislikePost((prev) => !prev);
   }
 
+  const DateFormatter = (datestring) => {
+    const date = new Date(datestring);
+    const now = Date.now();
+    const diffInMs = now - date.getTime(); // Positive if date is in the past
+
+    // Millisecond constants
+    const ONE_MINUTE = 60000;
+    const ONE_HOUR = 3600000;
+    const ONE_DAY = 86400000;
+    const ONE_WEEK = 604800000;
+    const ONE_MONTH = 2592000000; // 30 days
+    const ONE_YEAR = 31536000000; // 365 days
+
+    // Handle future dates safely
+    if (diffInMs < 0) {
+      return "In the future";
+    }
+
+    switch (true) {
+      case diffInMs < ONE_HOUR:
+        return `${Math.floor(diffInMs / ONE_MINUTE)} minutes ago`;
+
+      case diffInMs < ONE_DAY:
+        return `${Math.floor(diffInMs / ONE_HOUR)} hours ago`;
+
+      case diffInMs < ONE_MONTH:
+        return `${Math.floor(diffInMs / ONE_DAY)} days ago`;
+
+      case diffInMs < ONE_YEAR:
+        return `${Math.floor(diffInMs / ONE_MONTH)} months ago`;
+
+      case diffInMs > ONE_YEAR:
+        return `${Math.floor(diffInMs / ONE_YEAR)} years ago`;
+
+      default: {
+        const yearsAgo = Math.floor(diffInMs / ONE_YEAR);
+        return `${yearsAgo} ${yearsAgo === 1 ? "year" : "years"} ago`;
+      }
+    }
+  };
+
+  const openPost = (event, post) => {
+    event.stopPropagation();
+    navigate(`/post/${post.id}`,{
+      state: post
+    });
+  };
+
   return (
-    <div className="post-container">
-      <div className="post-header">
-        <img
-          src={post?.author?.avatar ? post.author.avatar : avatar}
-          alt="avatar"
-          className="profile-photo"
-        />
-        <div className="post-bio">
-          <h5>{post?.author?.name}</h5>
-          <small>16:06</small>
+    <div className="post-container" onClick={(e) => openPost(e, post)}>
+      <div className="top-bar">
+        <div className="post-header">
+          <img
+            src={post?.author?.avatar ? post.author.avatar : avatar}
+            alt="avatar"
+            className="profile-photo"
+          />
+
+          <div className="post-bio">
+            <h5>{post?.author?.name}</h5>
+            <small>{DateFormatter(post?.created_at)}</small>
+          </div>
         </div>
+        {String(post?.privacy).toLowerCase() == "public" && (
+          <div className="visibility">
+            <MdPublic />
+            <span>public</span>
+          </div>
+        )}
       </div>
       <div className="post-body">
         <p>{post?.content}</p>
