@@ -1,0 +1,102 @@
+.post-container {
+  background-color: #ffffffa9;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  width: 50%;
+  padding: 10px;
+  border: 1px transparent;
+  border-radius: 10px;
+  margin: 10px;
+  box-shadow: 5px 5px 4px rgba(173, 173, 173, 0.466);
+}
+
+.post-header {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.profile-photo {
+  border-radius: 50%;
+  border: 1px solid;
+  width: 48px;
+  height: 48px;
+  padding: 5px;
+}
+
+.post-bio h5 {
+  margin: 0;
+}
+
+.post-bio {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.post-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 5px;
+}
+
+.post-image {
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+.post-footer {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  justify-content: space-evenly;
+  border-top: 1px solid;
+  padding: 0px 0px;
+  align-items: center;
+}
+
+.reaction-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  min-width: 70px;
+}
+
+.reaction-count {
+  padding: 5px 10px;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.reaction-like {
+  color: blue;
+}
+.reaction-dislike {
+  color: red;
+}
+
+#like:hover {
+  color: blue;
+}
+#dislike:hover {
+  color: red;
+}
+
+.links {
+  padding: 5px 10px;
+  border: 1px transparent;
+  border-radius: 5px;
+  min-width: 60px;
+}
+.links:hover {
+  background-color: rgba(92, 87, 87, 0.9);
+}
+.center {
+  display: flex;
+  gap: 5px;
+}

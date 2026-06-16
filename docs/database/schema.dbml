@@ -1,6 +1,6 @@
 Project SocialNetwork {
   database_type: 'SQLite'
-  Note: 'Database schema for a Facebook-like social network (v1.1.0)'
+  Note: 'Database schema for a Facebook-like social network (v1.2.0)'
 }
 
 Table users {
@@ -10,7 +10,7 @@ Table users {
   first_name varchar [not null]
   last_name varchar [not null]
   dob date [not null]
-  avatar_url varchar
+  avatar varchar
   nickname varchar
   about_me text
   is_public boolean [default: true]
@@ -27,8 +27,8 @@ Table users {
 Table sessions {
   id uuid [pk]
   user_id uuid [ref: > users.id]
-  token varchar [unique, not null]
   expires_at timestamp [not null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
 }
 
 Table followers {
@@ -46,15 +46,26 @@ Table posts {
   id uuid [pk]
   user_id uuid [ref: > users.id, not null]
   group_id uuid [ref: > groups.id, null]
-  content text [not null]
+  content text [note: 'Required unless image_url is present for active posts; cleared on soft deletion']
   image_url varchar
-  privacy varchar [not null, note: 'Allowed values: "public", "almost_private", "private"; DB-level CHECK constraint recommended: CHECK (privacy IN (\'public\', \'almost_private\', \'private\'))']
+  privacy varchar [not null, note: '"public", "almost_private", "private". Enforced in migration SQL with CHECK(privacy IN (\'public\', \'almost_private\', \'private\')).']
 
   // Counter Caches
   comment_count integer [default: 0]
   like_count integer [default: 0]
+  dislike_count integer [default: 0]
 
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [null, note: 'Set when the author edits the post. NULL means never edited.']
+  deleted_at timestamp [null, note: 'Soft-delete marker. Deleted posts are returned using the minimal DeletedPost tombstone.']
+
+  indexes {
+    (created_at)
+    (user_id, created_at)
+    (group_id, created_at)
+  }
+
+  Note: 'Soft-deleted rows retain ownership, privacy, group, and audience data for authorization, but API tombstones expose only id and deleted.'
 }
 
 Table post_audiences {
@@ -63,48 +74,65 @@ Table post_audiences {
 
   indexes {
     (post_id, user_id) [pk]
+    (user_id)
   }
 }
 
-Table post_likes {
+Table post_votes {
   post_id uuid [ref: > posts.id]
   user_id uuid [ref: > users.id]
+  vote varchar [not null, note: 'Allowed values: "like", "dislike"; enforce with CHECK']
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [null, note: 'Set when the user changes between like and dislike.']
 
   indexes {
     (post_id, user_id) [pk]
+    (user_id)
   }
 
-  Note: 'Tracks who liked a post to prevent duplicate likes and allow un-liking.'
+  Note: 'One row per user and post guarantees mutually exclusive like/dislike voting. Deleting the row removes the vote.'
 }
 
 Table comments {
   id uuid [pk]
   post_id uuid [ref: > posts.id, not null]
   user_id uuid [ref: > users.id, not null]
-  parent_comment_id uuid [ref: > comments.id, null, note: 'ON DELETE CASCADE — deleting a parent comment should remove its replies']
-  content text [not null]
+  parent_comment_id uuid [null, note: 'Self-reference without ON DELETE CASCADE; soft-deleted parents retain replies']
+  content text [note: 'Required unless image_url is present for active comments; cleared on soft deletion']
   image_url varchar
 
   // Counter Caches
   like_count integer [default: 0]
+  dislike_count integer [default: 0]
 
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  deleted_at timestamp [null, note: 'Soft-delete marker. When set, clients render a deleted-content placeholder while preserving replies.']
+  updated_at timestamp [null, note: 'Set when the author edits the comment. NULL means never edited.']
 
   indexes {
-    (post_id)
-    (parent_comment_id)
+    (post_id, created_at) [name: 'idx_comments_post_created', note: 'Supports ordered comment-thread reads for a post']
+    (parent_comment_id, created_at) [name: 'idx_comments_parent_created', note: 'Supports ordered parent-to-children tree assembly']
+    (user_id, created_at) [name: 'idx_comments_user_created', note: 'Supports user activity queries']
   }
+
+  Note: 'Soft-deleted comments serialize as id/deleted/replies tombstones and remain in the thread.'
 }
 
-Table comment_likes {
+Ref: comments.parent_comment_id > comments.id
+
+Table comment_votes {
   comment_id uuid [ref: > comments.id]
   user_id uuid [ref: > users.id]
+  vote varchar [not null, note: '"like" or "dislike". Enforced in migration SQL with CHECK(vote IN (\'like\', \'dislike\')).']
   created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [null, note: 'Set when the user changes between like and dislike.']
 
   indexes {
     (comment_id, user_id) [pk]
+    (user_id)
   }
+
+  Note: 'One row per user and comment guarantees mutually exclusive like/dislike voting. Deleting the row removes the vote.'
 }
 
 Table groups {
