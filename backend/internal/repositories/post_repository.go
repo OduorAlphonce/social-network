@@ -96,6 +96,94 @@ func (r *sqlitePostRepository) ListPosts(query models.PostQuery, viewerID uuid.U
 	return posts, nil
 }
 
+func (r *sqlitePostRepository) ListHomeFeed(viewerID uuid.UUID, limit, offset int) ([]*models.PostWithAuthor, error) {
+	whereClause := `
+		p.group_id IS NULL
+		AND (
+			p.user_id = ?
+			OR p.privacy = 'public'
+			OR (
+				p.privacy = 'almost_private'
+				AND EXISTS (
+					SELECT 1
+					FROM followers f
+					WHERE f.follower_id = ?
+						AND f.followee_id = p.user_id
+						AND f.status = 'accepted'
+				)
+			)
+			OR (
+				p.privacy = 'private'
+				AND EXISTS (
+					SELECT 1
+					FROM post_audiences pa
+					WHERE pa.post_id = p.id
+						AND pa.user_id = ?
+				)
+			)
+		)`
+	args := []any{viewerID.String(), viewerID.String(), viewerID.String(), viewerID.String(), limit, maxInt(offset, 0)}
+	return r.listFeed(whereClause, args)
+}
+
+func (r *sqlitePostRepository) ListProfilePosts(profileUserID, viewerID uuid.UUID, limit, offset int) ([]*models.PostWithAuthor, error) {
+	whereClause := `
+		p.group_id IS NULL
+		AND p.user_id = ?
+		AND (
+			p.user_id = ?
+			OR p.privacy = 'public'
+			OR (
+				p.privacy = 'almost_private'
+				AND EXISTS (
+					SELECT 1
+					FROM followers f
+					WHERE f.follower_id = ?
+						AND f.followee_id = p.user_id
+						AND f.status = 'accepted'
+				)
+			)
+			OR (
+				p.privacy = 'private'
+				AND EXISTS (
+					SELECT 1
+					FROM post_audiences pa
+					WHERE pa.post_id = p.id
+						AND pa.user_id = ?
+				)
+			)
+		)`
+	args := []any{viewerID.String(), profileUserID.String(), viewerID.String(), viewerID.String(), viewerID.String(), limit, maxInt(offset, 0)}
+	return r.listFeed(whereClause, args)
+}
+
+func (r *sqlitePostRepository) ListGroupFeed(groupID, viewerID uuid.UUID, limit, offset int) ([]*models.PostWithAuthor, error) {
+	whereClause := `p.group_id = ?`
+	args := []any{viewerID.String(), groupID.String(), limit, maxInt(offset, 0)}
+	return r.listFeed(whereClause, args)
+}
+
+func (r *sqlitePostRepository) listFeed(whereClause string, args []any) ([]*models.PostWithAuthor, error) {
+	rows, err := r.db.Query(postSelectSQL(whereClause, " ORDER BY p.created_at DESC, p.id DESC LIMIT ? OFFSET ?"), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	posts := []*models.PostWithAuthor{}
+	for rows.Next() {
+		post, err := scanPostWithAuthor(rows)
+		if err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return posts, nil
+}
+
 func (r *sqlitePostRepository) ReplacePostAudience(postID uuid.UUID, userIDs []uuid.UUID) error {
 	tx, err := r.db.Begin()
 	if err != nil {

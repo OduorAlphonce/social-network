@@ -127,6 +127,85 @@ func TestVoteRepositoriesUpdateCountsAndViewerVote(t *testing.T) {
 	}
 }
 
+func TestPostRepositoryHomeFeedPrivacyAndStableOrdering(t *testing.T) {
+	db := newPostCommentTestDB(t)
+	ids := seedFeedPrivacyRows(t, db)
+	repo := NewPostRepository(db)
+
+	selectedPosts, err := repo.ListHomeFeed(ids.selectedFollowerID, 10, 0)
+	if err != nil {
+		t.Fatalf("ListHomeFeed selected follower returned error: %v", err)
+	}
+	assertPostIDs(t, selectedPosts, ids.privatePostID, ids.almostPrivatePostID, ids.publicPostID)
+	if selectedPosts[2].ViewerVote != models.ViewerVoteLike {
+		t.Fatalf("public post viewer vote = %q, want like", selectedPosts[2].ViewerVote)
+	}
+
+	unselectedPosts, err := repo.ListHomeFeed(ids.unselectedFollowerID, 10, 0)
+	if err != nil {
+		t.Fatalf("ListHomeFeed unselected follower returned error: %v", err)
+	}
+	assertPostIDs(t, unselectedPosts, ids.almostPrivatePostID, ids.publicPostID)
+
+	nonFollowerPosts, err := repo.ListHomeFeed(ids.nonFollowerID, 10, 0)
+	if err != nil {
+		t.Fatalf("ListHomeFeed non-follower returned error: %v", err)
+	}
+	assertPostIDs(t, nonFollowerPosts, ids.publicPostID)
+
+	ownerPosts, err := repo.ListHomeFeed(ids.authorID, 10, 0)
+	if err != nil {
+		t.Fatalf("ListHomeFeed owner returned error: %v", err)
+	}
+	assertPostIDs(t, ownerPosts, ids.privatePostID, ids.almostPrivatePostID, ids.publicPostID)
+}
+
+func TestPostRepositoryProfileFeedAppliesPostPrivacy(t *testing.T) {
+	db := newPostCommentTestDB(t)
+	ids := seedFeedPrivacyRows(t, db)
+	repo := NewPostRepository(db)
+
+	selectedPosts, err := repo.ListProfilePosts(ids.authorID, ids.selectedFollowerID, 10, 0)
+	if err != nil {
+		t.Fatalf("ListProfilePosts selected follower returned error: %v", err)
+	}
+	assertPostIDs(t, selectedPosts, ids.privatePostID, ids.almostPrivatePostID, ids.publicPostID)
+
+	nonFollowerPosts, err := repo.ListProfilePosts(ids.authorID, ids.nonFollowerID, 10, 0)
+	if err != nil {
+		t.Fatalf("ListProfilePosts non-follower returned error: %v", err)
+	}
+	assertPostIDs(t, nonFollowerPosts, ids.publicPostID)
+}
+
+func TestPostRepositoryGroupFeedReturnsOnlyGroupPosts(t *testing.T) {
+	db := newPostCommentTestDB(t)
+	ids := seedFeedPrivacyRows(t, db)
+	repo := NewPostRepository(db)
+	members := NewGroupMembershipRepository(db)
+
+	accepted, err := members.IsAcceptedGroupMember(ids.groupID, ids.groupMemberID)
+	if err != nil {
+		t.Fatalf("IsAcceptedGroupMember accepted returned error: %v", err)
+	}
+	if !accepted {
+		t.Fatal("expected group member to be accepted")
+	}
+	notAccepted, err := members.IsAcceptedGroupMember(ids.groupID, ids.nonFollowerID)
+	if err != nil {
+		t.Fatalf("IsAcceptedGroupMember non-member returned error: %v", err)
+	}
+	if notAccepted {
+		t.Fatal("expected non-member to be rejected")
+	}
+
+	posts, err := repo.ListGroupFeed(ids.groupID, ids.groupMemberID, 10, 0)
+	if err != nil {
+		t.Fatalf("ListGroupFeed returned error: %v", err)
+	}
+	assertPostIDs(t, posts, ids.groupPostID)
+}
+
 type postCommentSeedIDs struct {
 	authorID        uuid.UUID
 	viewerID        uuid.UUID
@@ -134,6 +213,19 @@ type postCommentSeedIDs struct {
 	postID          uuid.UUID
 	parentCommentID uuid.UUID
 	replyCommentID  uuid.UUID
+}
+
+type feedPrivacySeedIDs struct {
+	authorID             uuid.UUID
+	selectedFollowerID   uuid.UUID
+	unselectedFollowerID uuid.UUID
+	nonFollowerID        uuid.UUID
+	groupMemberID        uuid.UUID
+	groupID              uuid.UUID
+	publicPostID         uuid.UUID
+	almostPrivatePostID  uuid.UUID
+	privatePostID        uuid.UUID
+	groupPostID          uuid.UUID
 }
 
 func newPostCommentTestDB(t *testing.T) *sql.DB {
@@ -180,6 +272,31 @@ func newPostCommentTestDB(t *testing.T) *sql.DB {
 			updated_at TEXT,
 			deleted_at TEXT,
 			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+		);
+		CREATE TABLE followers (
+			follower_id TEXT NOT NULL,
+			followee_id TEXT NOT NULL,
+			status TEXT NOT NULL CHECK (status IN ('pending', 'accepted')),
+			created_at TEXT NOT NULL,
+			PRIMARY KEY (follower_id, followee_id),
+			FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+			FOREIGN KEY (followee_id) REFERENCES users(id) ON DELETE CASCADE
+		);
+		CREATE TABLE groups (
+			id TEXT PRIMARY KEY,
+			creator_id TEXT,
+			title TEXT NOT NULL,
+			description TEXT,
+			created_at TEXT NOT NULL,
+			FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL
+		);
+		CREATE TABLE group_members (
+			group_id TEXT NOT NULL,
+			user_id TEXT NOT NULL,
+			status TEXT NOT NULL CHECK (status IN ('pending_invite', 'pending_request', 'accepted')),
+			PRIMARY KEY (group_id, user_id),
+			FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 		);
 		CREATE TABLE post_audiences (
 			post_id TEXT NOT NULL,
@@ -298,6 +415,68 @@ func seedPostCommentTestRows(t *testing.T, db *sql.DB) postCommentSeedIDs {
 	return ids
 }
 
+func seedFeedPrivacyRows(t *testing.T, db *sql.DB) feedPrivacySeedIDs {
+	t.Helper()
+
+	ids := feedPrivacySeedIDs{
+		authorID:             uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001")),
+		selectedFollowerID:   uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000002")),
+		unselectedFollowerID: uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000003")),
+		nonFollowerID:        uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000004")),
+		groupMemberID:        uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000005")),
+		groupID:              uuid.Must(uuid.FromString("20000000-0000-0000-0000-000000000001")),
+		publicPostID:         uuid.Must(uuid.FromString("aaaaaaaa-0000-0000-0000-000000000001")),
+		almostPrivatePostID:  uuid.Must(uuid.FromString("bbbbbbbb-0000-0000-0000-000000000001")),
+		privatePostID:        uuid.Must(uuid.FromString("cccccccc-0000-0000-0000-000000000001")),
+		groupPostID:          uuid.Must(uuid.FromString("dddddddd-0000-0000-0000-000000000001")),
+	}
+	now := time.Date(2026, 6, 16, 12, 0, 0, 0, time.UTC)
+
+	insertUser(t, db, ids.authorID, "author@example.com", "Author", "One")
+	insertUser(t, db, ids.selectedFollowerID, "selected@example.com", "Selected", "Follower")
+	insertUser(t, db, ids.unselectedFollowerID, "unselected@example.com", "Unselected", "Follower")
+	insertUser(t, db, ids.nonFollowerID, "nonfollower@example.com", "Non", "Follower")
+	insertUser(t, db, ids.groupMemberID, "member@example.com", "Group", "Member")
+
+	insertFollow(t, db, ids.selectedFollowerID, ids.authorID, models.Accepted)
+	insertFollow(t, db, ids.unselectedFollowerID, ids.authorID, models.Accepted)
+	insertPostRow(t, db, ids.publicPostID, ids.authorID, nil, models.PostPrivacyPublic, now)
+	insertPostRow(t, db, ids.almostPrivatePostID, ids.authorID, nil, models.PostPrivacyAlmostPrivate, now)
+	insertPostRow(t, db, ids.privatePostID, ids.authorID, nil, models.PostPrivacyPrivate, now)
+	insertPostAudienceRow(t, db, ids.privatePostID, ids.selectedFollowerID)
+
+	_, err := db.Exec(
+		`INSERT INTO post_votes (post_id, user_id, vote, created_at) VALUES (?, ?, 'like', ?)`,
+		ids.publicPostID.String(),
+		ids.selectedFollowerID.String(),
+		now.Format(time.RFC3339),
+	)
+	if err != nil {
+		t.Fatalf("insert feed post vote: %v", err)
+	}
+
+	_, err = db.Exec(
+		`INSERT INTO groups (id, creator_id, title, created_at) VALUES (?, ?, 'Hikers', ?)`,
+		ids.groupID.String(),
+		ids.authorID.String(),
+		now.Format(time.RFC3339),
+	)
+	if err != nil {
+		t.Fatalf("insert group: %v", err)
+	}
+	_, err = db.Exec(
+		`INSERT INTO group_members (group_id, user_id, status) VALUES (?, ?, 'accepted')`,
+		ids.groupID.String(),
+		ids.groupMemberID.String(),
+	)
+	if err != nil {
+		t.Fatalf("insert group member: %v", err)
+	}
+	insertPostRow(t, db, ids.groupPostID, ids.authorID, &ids.groupID, models.PostPrivacyPublic, now.Add(time.Hour))
+
+	return ids
+}
+
 func insertUser(t *testing.T, db *sql.DB, id uuid.UUID, email, firstName, lastName string) {
 	t.Helper()
 	_, err := db.Exec(`
@@ -309,5 +488,59 @@ func insertUser(t *testing.T, db *sql.DB, id uuid.UUID, email, firstName, lastNa
 	`, id.String(), email, firstName, lastName, time.Date(2026, 6, 16, 8, 0, 0, 0, time.UTC).Format(time.RFC3339))
 	if err != nil {
 		t.Fatalf("insert user %s: %v", id, err)
+	}
+}
+
+func insertFollow(t *testing.T, db *sql.DB, followerID, followeeID uuid.UUID, status models.Status) {
+	t.Helper()
+	_, err := db.Exec(
+		`INSERT INTO followers (follower_id, followee_id, status, created_at) VALUES (?, ?, ?, ?)`,
+		followerID.String(),
+		followeeID.String(),
+		string(status),
+		time.Date(2026, 6, 16, 8, 0, 0, 0, time.UTC).Format(time.RFC3339),
+	)
+	if err != nil {
+		t.Fatalf("insert follow: %v", err)
+	}
+}
+
+func insertPostRow(t *testing.T, db *sql.DB, id, authorID uuid.UUID, groupID *uuid.UUID, privacy models.PostPrivacy, createdAt time.Time) {
+	t.Helper()
+	var groupValue any
+	if groupID != nil {
+		groupValue = groupID.String()
+	}
+	_, err := db.Exec(
+		`INSERT INTO posts (id, user_id, group_id, content, privacy, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		id.String(),
+		authorID.String(),
+		groupValue,
+		"feed post",
+		string(privacy),
+		createdAt.Format(time.RFC3339),
+	)
+	if err != nil {
+		t.Fatalf("insert post %s: %v", id, err)
+	}
+}
+
+func insertPostAudienceRow(t *testing.T, db *sql.DB, postID, userID uuid.UUID) {
+	t.Helper()
+	_, err := db.Exec(`INSERT INTO post_audiences (post_id, user_id) VALUES (?, ?)`, postID.String(), userID.String())
+	if err != nil {
+		t.Fatalf("insert post audience: %v", err)
+	}
+}
+
+func assertPostIDs(t *testing.T, posts []*models.PostWithAuthor, expected ...uuid.UUID) {
+	t.Helper()
+	if len(posts) != len(expected) {
+		t.Fatalf("post count = %d, want %d", len(posts), len(expected))
+	}
+	for i, post := range posts {
+		if post.Post.ID != expected[i] {
+			t.Fatalf("post[%d] = %s, want %s", i, post.Post.ID, expected[i])
+		}
 	}
 }
