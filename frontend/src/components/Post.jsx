@@ -74,10 +74,11 @@ const Post = ({ post }) => {
             <small>{DateFormatter(post?.created_at)}</small>
           </div>
         </div>
+        {String(post?.privacy).toLowerCase() == "public" &&
         <div className="visibility">
           <MdPublic />
           <span>public</span>
-        </div>
+        </div>}
       </div>
       <div className="post-body">
         <p>{post?.content}</p>
