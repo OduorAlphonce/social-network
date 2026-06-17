@@ -168,3 +168,67 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 	utils.SuccessResponse(w, response, http.StatusOK)
 }
+
+func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch && r.Method != http.MethodPut {
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
+		return
+	}
+
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	user, err := h.userService.Authenticate(cookie.Value)
+	if err != nil {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	var req models.UpdateUserRequest
+	contentType := r.Header.Get("Content-Type")
+
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		err := r.ParseMultipartForm(10 << 20)
+		if err != nil {
+			_ = utils.SendError(w, http.StatusBadRequest, "Failed to parse multipart form", nil)
+			return
+		}
+
+		req.Email = r.FormValue("email")
+		req.CurrentPassword = r.FormValue("current_password")
+		req.NewPassword = r.FormValue("new_password")
+		req.FirstName = r.FormValue("first_name")
+		req.LastName = r.FormValue("last_name")
+		req.DateOfBirth = r.FormValue("date_of_birth")
+		req.Nickname = r.FormValue("nickname")
+		req.AboutMe = r.FormValue("about_me")
+		req.IsPublic = r.FormValue("is_public") == "true"
+
+		file, _, err := r.FormFile("avatar")
+		if err == nil {
+			defer file.Close()
+			req.Avatar, err = utils.SaveImage(file, "/uploads/avatars/")
+			if err != nil {
+				utils.SendError(w, http.StatusInternalServerError, "Failed to save image", nil)
+				return
+			}
+		}
+	} else {
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			_ = utils.SendError(w, http.StatusBadRequest, "Invalid request body", nil)
+			return
+		}
+	}
+
+	updatedUser, err := h.userService.Update(user.ID, &req)
+	if err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	_ = utils.SendSuccess(w, http.StatusOK, "Profile updated successfully", updatedUser)
+}
