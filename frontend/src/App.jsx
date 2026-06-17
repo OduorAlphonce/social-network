@@ -15,7 +15,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./context/useAuth.js";
 
 function App() {
-  const { isAuthenticated} = useAuth()
+  const { isAuthenticated } = useAuth();
   return (
     <Routes>
       {/* If not authenticated, display this page without <Layout/>*/}

@@ -15,12 +15,12 @@
   font-size: 13px;
 }
 
-.comment-body{
+.comment-body {
   display: flex;
   flex-direction: column;
 }
 
-.comment-details{
+.comment-details {
   background-color: rgba(146, 146, 146, 0.199);
   border-radius: 10px;
   padding: 0px 10px;
@@ -28,10 +28,10 @@
   flex-direction: column;
 }
 
-.comment-details > strong{
+.comment-details > strong {
   margin-bottom: -15px;
 }
 
-.comment-body > div > span{
+.comment-body > div > span {
   font-weight: 500;
 }

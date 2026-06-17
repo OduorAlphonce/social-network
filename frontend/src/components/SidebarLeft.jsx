@@ -9,32 +9,32 @@ const SidebarLeft = () => {
   return (
     <aside className="sidebar">
       <ul>
-      <li className="links" onClick={() => navigate("/")}>
-        <BiHome /> Home
-      </li>
-      <li className="links" onClick={() => navigate("/profile")}>
-        <BiUser /> Profile
-      </li>
-      <li className="links" onClick={() => navigate("/friends")}>
-        <BiGroup />
-        Friends
-      </li>
-      <li className="links" onClick={() => navigate("/groups")}>
-        <MdOutlineGroup />
-        Groups
-      </li>
-      <li className="links" onClick={() => navigate("/messages")}>
-        <AiOutlineMessage />
-        Messages
-      </li>
-      <li className="links" onClick={() => navigate("/notifications")}>
-        <IoIosNotificationsOutline />
-        Notification
-      </li>
-      <li className="links" onClick={() => navigate("/events")}>
-        <MdOutlineEvent />
-        Events
-      </li>
+        <li className="links" onClick={() => navigate("/")}>
+          <BiHome /> Home
+        </li>
+        <li className="links" onClick={() => navigate("/profile")}>
+          <BiUser /> Profile
+        </li>
+        <li className="links" onClick={() => navigate("/friends")}>
+          <BiGroup />
+          Friends
+        </li>
+        <li className="links" onClick={() => navigate("/groups")}>
+          <MdOutlineGroup />
+          Groups
+        </li>
+        <li className="links" onClick={() => navigate("/messages")}>
+          <AiOutlineMessage />
+          Messages
+        </li>
+        <li className="links" onClick={() => navigate("/notifications")}>
+          <IoIosNotificationsOutline />
+          Notification
+        </li>
+        <li className="links" onClick={() => navigate("/events")}>
+          <MdOutlineEvent />
+          Events
+        </li>
       </ul>
     </aside>
   );

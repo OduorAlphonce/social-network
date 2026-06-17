@@ -1,5 +1,5 @@
-import { Navigate, useLocation } from 'react-router';
-import { useAuth } from '../context/useAuth';
+import { Navigate, useLocation } from "react-router";
+import { useAuth } from "../context/useAuth";
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -7,14 +7,16 @@ const ProtectedRoute = ({ children }) => {
 
   if (isLoading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '1.2rem',
-        color: '#666'
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          fontSize: "1.2rem",
+          color: "#666",
+        }}
+      >
         Loading...
       </div>
     );

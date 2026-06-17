@@ -1,11 +1,11 @@
 package services
 
 import (
-	"context" 
+	"context"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
 )
-type PermissionService struct {
 
+type PermissionService struct {
 }
 
 func NewPermissionService(followerRepo any) *PermissionService {

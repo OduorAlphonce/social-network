@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router';
-import { useAuth } from '../context/useAuth';
-import '../styles/LoginForm.css';
+import { useState } from "react";
+import { useNavigate, useLocation, Link } from "react-router";
+import { useAuth } from "../context/useAuth";
+import "../styles/LoginForm.css";
 
 const LoginForm = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { login } = useAuth();
@@ -14,18 +14,18 @@ const LoginForm = () => {
   const location = useLocation();
 
   // Redirect to where they came from, or home
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || "/";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsSubmitting(true);
 
     try {
       await login({ email, password });
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      setError(err.message || "Login failed. Please check your credentials.");
     } finally {
       setIsSubmitting(false);
     }
@@ -60,12 +60,8 @@ const LoginForm = () => {
             placeholder="Enter your password"
           />
         </div>
-        <button 
-          type="submit" 
-          className="submit-btn" 
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Logging in...' : 'Login'}
+        <button type="submit" className="submit-btn" disabled={isSubmitting}>
+          {isSubmitting ? "Logging in..." : "Login"}
         </button>
       </form>
       <div className="login-footer">

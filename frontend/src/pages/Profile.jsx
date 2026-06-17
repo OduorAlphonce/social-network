@@ -1,4 +1,4 @@
-import ProfileUpdateForm from '../components/ProfileUpdateForm';
+import ProfileUpdateForm from "../components/ProfileUpdateForm";
 
 const Profile = () => {
   return (

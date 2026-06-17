@@ -22,8 +22,8 @@ const PostDetail = () => {
       <Post post={location.state} />;
       <div className="comments card">
         <h3>Comments</h3>
-        {mockComment.map((it,idx) => (
-          <Comment comment={it} key={ idx} />
+        {mockComment.map((it, idx) => (
+          <Comment comment={it} key={idx} />
         ))}
       </div>
     </div>
