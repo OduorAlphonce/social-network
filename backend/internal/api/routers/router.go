@@ -16,6 +16,7 @@ import (
 func RegisterRoutes(
 	userHandler *handlers.UserHandler,
 	followerHandler *handlers.FollowerHandler,
+	postHandler *handlers.PostHandler, // 1. Added postHandler parameter to fix main.go
 	authMiddleware func(http.Handler) http.Handler,
 	allowedOrigin string,
 ) http.Handler {
@@ -48,6 +49,9 @@ func RegisterRoutes(
 	mux.Handle("/api/followers/reject", authMiddleware(http.HandlerFunc(followerHandler.RejectFollow)))
 	mux.Handle("/api/followers/followers", authMiddleware(http.HandlerFunc(followerHandler.GetFollowers)))
 	mux.Handle("/api/followers/following", authMiddleware(http.HandlerFunc(followerHandler.GetFollowing)))
+
+	// 2. Added Single Post Route using Go 1.22 native path wildcard syntax
+	mux.Handle("/api/posts/{id}", authMiddleware(http.HandlerFunc(postHandler.GetSinglePost)))
 
 	return middleware.CorsMiddleware(mux)
 }
