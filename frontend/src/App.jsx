@@ -12,12 +12,14 @@ import PostDetail from "./pages/PostDetail.jsx";
 import RegisterForm from "./components/RegisterForm";
 import LoginForm from "./components/LoginForm";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { useAuth } from "./context/useAuth.js";
 
 function App() {
+  const { isAuthenticated} = useAuth()
   return (
     <Routes>
       {/* If not authenticated, display this page without <Layout/>*/}
-      {1 == 2 && <Route path="/post/:id" element={<PostDetail />} />}
+      {!isAuthenticated && <Route path="/post/:id" element={<PostDetail />} />}
       <Route path="/register" element={<RegisterForm />} />
       <Route path="/login" element={<LoginForm />} />
       <Route
