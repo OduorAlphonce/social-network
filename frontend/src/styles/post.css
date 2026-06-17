@@ -84,6 +84,16 @@
   min-width: 70px;
 }
 
+.reaction-button {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  padding: 0;
+}
+
 .reaction-count {
   padding: 5px 10px;
   display: flex;
@@ -98,10 +108,10 @@
   color: red;
 }
 
-#like:hover {
+.reaction-button[aria-label="Like"]:hover {
   color: blue;
 }
-#dislike:hover {
+.reaction-button[aria-label="Dislike"]:hover {
   color: red;
 }
 

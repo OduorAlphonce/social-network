@@ -1,5 +1,4 @@
-import React from "react";
-import "../styles/upcoming-events.css"
+import "../styles/upcoming-events.css";
 
 const UpcomingEvent = ({ event }) => {
   return (
@@ -10,7 +9,9 @@ const UpcomingEvent = ({ event }) => {
       </div>
       <div className="details">
         <strong>{event.title}</strong>
-        <p>{event?.time} - {event.location}</p>
+        <p>
+          {event?.time} - {event.location}
+        </p>
       </div>
     </div>
   );

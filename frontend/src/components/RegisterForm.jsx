@@ -1,26 +1,27 @@
-import { useState } from 'react';
-import '../styles/RegisterForm.css';
+import { useState } from "react";
+import "../styles/RegisterForm.css";
+import { apiFetch } from "../utils/api";
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    first_name: '',
-    last_name: '',
-    date_of_birth: '',
-    nickname: '',
-    about_me: '',
+    email: "",
+    password: "",
+    first_name: "",
+    last_name: "",
+    date_of_birth: "",
+    nickname: "",
+    about_me: "",
     is_public: false,
   });
   const [avatar, setAvatar] = useState(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -30,37 +31,32 @@ const RegisterForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     const data = new FormData();
     Object.keys(formData).forEach((key) => {
       data.append(key, formData[key]);
     });
     if (avatar) {
-      data.append('avatar', avatar);
+      data.append("avatar", avatar);
     }
 
     try {
-      const response = await fetch('http://localhost:8080/api/users/register', {
-        method: 'POST',
+      await apiFetch("/api/users/register", {
+        method: "POST",
         body: data,
       });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || 'Registration failed');
-      }
-
-      setSuccess('Registration successful! You can now log in.');
+      setSuccess("Registration successful! You can now log in.");
       setFormData({
-        email: '',
-        password: '',
-        first_name: '',
-        last_name: '',
-        date_of_birth: '',
-        nickname: '',
-        about_me: '',
+        email: "",
+        password: "",
+        first_name: "",
+        last_name: "",
+        date_of_birth: "",
+        nickname: "",
+        about_me: "",
         is_public: false,
       });
       setAvatar(null);
@@ -172,7 +168,9 @@ const RegisterForm = () => {
             onChange={handleFileChange}
           />
         </div>
-        <button type="submit" className="submit-btn">Register</button>
+        <button type="submit" className="submit-btn">
+          Register
+        </button>
       </form>
     </div>
   );

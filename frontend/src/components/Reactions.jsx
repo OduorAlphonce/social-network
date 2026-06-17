@@ -1,24 +1,48 @@
 import { BiSolidDislike, BiSolidLike } from "react-icons/bi";
 
 const Like = ({ like, isActive }) => {
+  if (!like) {
+    return <BiSolidLike aria-hidden="true" size={24} />;
+  }
+
+  const handleClick = (event) => {
+    event.stopPropagation();
+    like?.();
+  };
+
   return (
-    <BiSolidLike
-      id="like"
-      onClick={like}
-      size={24}
-      className={isActive ? "reaction-like" : ""}
-    />
+    <button
+      type="button"
+      aria-label="Like"
+      aria-pressed={Boolean(isActive)}
+      className={`reaction-button ${isActive ? "reaction-like" : ""}`}
+      onClick={handleClick}
+    >
+      <BiSolidLike aria-hidden="true" size={24} />
+    </button>
   );
 };
 
 const Dislike = ({ dislike, isActive }) => {
+  if (!dislike) {
+    return <BiSolidDislike aria-hidden="true" size={24} />;
+  }
+
+  const handleClick = (event) => {
+    event.stopPropagation();
+    dislike?.();
+  };
+
   return (
-    <BiSolidDislike
-      id="dislike"
-      onClick={dislike}
-      size={24}
-      className={isActive ? "reaction-dislike" : ""}
-    />
+    <button
+      type="button"
+      aria-label="Dislike"
+      aria-pressed={Boolean(isActive)}
+      className={`reaction-button ${isActive ? "reaction-dislike" : ""}`}
+      onClick={handleClick}
+    >
+      <BiSolidDislike aria-hidden="true" size={24} />
+    </button>
   );
 };
 

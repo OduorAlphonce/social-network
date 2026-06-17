@@ -1,45 +1,33 @@
-import { useState, useEffect } from 'react';
-import useAuth from '../context/useAuth';
-import './RegisterForm.css'; // Reusing styles for consistency
+import { useState } from "react";
+import { useAuth } from "../context/useAuth";
+import "../styles/RegisterForm.css"; // Reusing styles for consistency
+import { apiFetch } from "../utils/api";
 
-const ProfileUpdateForm = () => {
-  const { currentUser, refresh } = useAuth();
-  const [formData, setFormData] = useState({
-    email: '',
-    current_password: '',
-    new_password: '',
-    first_name: '',
-    last_name: '',
-    date_of_birth: '',
-    nickname: '',
-    about_me: '',
-    is_public: false,
-  });
+const getProfileFormData = (currentUser) => ({
+  email: currentUser.email || "",
+  current_password: "",
+  new_password: "",
+  first_name: currentUser.first_name || "",
+  last_name: currentUser.last_name || "",
+  date_of_birth: currentUser.date_of_birth || "",
+  nickname: currentUser.nickname || "",
+  about_me: currentUser.about_me || "",
+  is_public: currentUser.is_public || false,
+});
+
+const ProfileUpdateFields = ({ currentUser, refresh }) => {
+  const [formData, setFormData] = useState(() =>
+    getProfileFormData(currentUser)
+  );
   const [avatar, setAvatar] = useState(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  useEffect(() => {
-    if (currentUser) {
-      setFormData({
-        email: currentUser.email || '',
-        current_password: '',
-        new_password: '',
-        first_name: currentUser.first_name || '',
-        last_name: currentUser.last_name || '',
-        date_of_birth: currentUser.date_of_birth || '',
-        nickname: currentUser.nickname || '',
-        about_me: currentUser.about_me || '',
-        is_public: currentUser.is_public || false,
-      });
-    }
-  }, [currentUser]);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -49,39 +37,36 @@ const ProfileUpdateForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     const data = new FormData();
     Object.keys(formData).forEach((key) => {
-      if (formData[key] !== '' || key === 'is_public') {
+      if (formData[key] !== "" || key === "is_public") {
         data.append(key, formData[key]);
       }
     });
     if (avatar) {
-      data.append('avatar', avatar);
+      data.append("avatar", avatar);
     }
 
     try {
-      const response = await fetch('http://localhost:8080/api/users/update', {
-        method: 'PATCH',
+      await apiFetch("/api/users/update", {
+        method: "PATCH",
         body: data,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Update failed');
-      }
-
-      setSuccess('Profile updated successfully!');
+      setSuccess("Profile updated successfully!");
       await refresh();
-      setFormData(prev => ({ ...prev, current_password: '', new_password: '' }));
+      setFormData((prev) => ({
+        ...prev,
+        current_password: "",
+        new_password: "",
+      }));
     } catch (err) {
       setError(err.message);
     }
   };
-
-  if (!currentUser) return <div>Loading...</div>;
 
   return (
     <div className="register-form-container">
@@ -99,7 +84,7 @@ const ProfileUpdateForm = () => {
             onChange={handleChange}
           />
         </div>
-        
+
         <div className="form-row">
           <div className="form-group">
             <label htmlFor="first_name">First Name</label>
@@ -179,10 +164,14 @@ const ProfileUpdateForm = () => {
         </div>
 
         <hr />
-        <p className="form-hint">Fill these only if you want to change email or password</p>
-        
+        <p className="form-hint">
+          Fill these only if you want to change email or password
+        </p>
+
         <div className="form-group">
-          <label htmlFor="current_password">Current Password (Required for sensitive changes)</label>
+          <label htmlFor="current_password">
+            Current Password (Required for sensitive changes)
+          </label>
           <input
             type="password"
             id="current_password"
@@ -203,9 +192,27 @@ const ProfileUpdateForm = () => {
           />
         </div>
 
-        <button type="submit" className="submit-btn">Update Profile</button>
+        <button type="submit" className="submit-btn">
+          Update Profile
+        </button>
       </form>
     </div>
+  );
+};
+
+const ProfileUpdateForm = () => {
+  const { currentUser, refresh } = useAuth();
+
+  if (!currentUser) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <ProfileUpdateFields
+      key={currentUser.id || currentUser.email}
+      currentUser={currentUser}
+      refresh={refresh}
+    />
   );
 };
 

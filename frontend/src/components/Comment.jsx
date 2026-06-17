@@ -1,8 +1,7 @@
 import "../styles/comment.css";
+import avatar from "../assets/user.svg";
 
 const Comment = ({ comment }) => {
-
- 
   return (
     <div id="comment-container">
       <img
@@ -15,7 +14,9 @@ const Comment = ({ comment }) => {
           <strong>{comment?.name}</strong>
           <p>{comment?.content}</p>
         </div>
-        <div>{comment?.time} <span>Like</span>  <span>Reply</span></div>
+        <div>
+          {comment?.time} <span>Like</span> <span>Reply</span>
+        </div>
       </div>
     </div>
   );

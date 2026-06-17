@@ -8,6 +8,7 @@ import { useNavigate } from "react-router";
 const Post = ({ post }) => {
   const [likePost, setLikePost] = useState(false);
   const [dislikePost, setDislikePost] = useState(false);
+  const [renderedAt] = useState(() => Date.now());
 
   const navigate = useNavigate();
 
@@ -21,16 +22,14 @@ const Post = ({ post }) => {
     setDislikePost((prev) => !prev);
   }
 
-  const DateFormatter = (datestring) => {
+  const DateFormatter = (datestring, now) => {
     const date = new Date(datestring);
-    const now = Date.now();
     const diffInMs = now - date.getTime(); // Positive if date is in the past
 
     // Millisecond constants
     const ONE_MINUTE = 60000;
     const ONE_HOUR = 3600000;
     const ONE_DAY = 86400000;
-    const ONE_WEEK = 604800000;
     const ONE_MONTH = 2592000000; // 30 days
     const ONE_YEAR = 31536000000; // 365 days
 
@@ -64,8 +63,8 @@ const Post = ({ post }) => {
 
   const openPost = (event, post) => {
     event.stopPropagation();
-    navigate(`/post/${post.id}`,{
-      state: post
+    navigate(`/post/${post.id}`, {
+      state: post,
     });
   };
 
@@ -81,7 +80,7 @@ const Post = ({ post }) => {
 
           <div className="post-bio">
             <h5>{post?.author?.name}</h5>
-            <small>{DateFormatter(post?.created_at)}</small>
+            <small>{DateFormatter(post?.created_at, renderedAt)}</small>
           </div>
         </div>
         {String(post?.privacy).toLowerCase() == "public" && (
