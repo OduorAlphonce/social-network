@@ -1,0 +1,233 @@
+package repositories
+
+import (
+	"database/sql"
+	"errors"
+	"time"
+
+	"github.com/gofrs/uuid/v5"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
+)
+
+type sqliteCommentRepository struct {
+	db *sql.DB
+}
+
+// NewCommentRepository creates a SQLite-backed comment repository.
+func NewCommentRepository(db *sql.DB) CommentRepository {
+	return &sqliteCommentRepository{db: db}
+}
+
+func (r *sqliteCommentRepository) CreateComment(comment *models.Comment) error {
+	query := `
+		INSERT INTO comments (
+			id, post_id, user_id, parent_comment_id, content, image_url,
+			like_count, dislike_count, created_at, deleted_at, updated_at
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err := r.db.Exec(
+		query,
+		comment.ID.String(),
+		comment.PostID.String(),
+		nullableUUIDArg(comment.UserID),
+		nullableUUIDArg(comment.ParentCommentID),
+		comment.Content,
+		nullableStringArg(comment.ImageURL),
+		comment.LikeCount,
+		comment.DislikeCount,
+		comment.CreatedAt,
+		nullableTimeArg(comment.DeletedAt),
+		nullableTimeArg(comment.UpdatedAt),
+	)
+	return err
+}
+
+func (r *sqliteCommentRepository) GetCommentByID(id, viewerID uuid.UUID) (*models.CommentWithAuthor, error) {
+	row := r.db.QueryRow(commentSelectSQL(`c.id = ?`, ""), viewerID.String(), id.String())
+	comment, err := scanCommentWithAuthor(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, errors.New("comment not found")
+	}
+	return comment, err
+}
+
+func (r *sqliteCommentRepository) ListCommentTreeByPost(postID, viewerID uuid.UUID, limit, offset int) ([]*models.CommentWithAuthor, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	query := `
+		WITH RECURSIVE roots AS (
+			SELECT id
+			FROM comments
+			WHERE post_id = ? AND parent_comment_id IS NULL
+			ORDER BY created_at ASC
+			LIMIT ? OFFSET ?
+		),
+		tree(id) AS (
+			SELECT id FROM roots
+			UNION ALL
+			SELECT child.id
+			FROM comments child
+			JOIN tree parent ON child.parent_comment_id = parent.id
+		)
+	` + commentSelectSQL(`c.id IN (SELECT id FROM tree)`, ` ORDER BY c.created_at ASC`)
+
+	rows, err := r.db.Query(query, postID.String(), limit, offset, viewerID.String())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	comments := []*models.CommentWithAuthor{}
+	for rows.Next() {
+		comment, err := scanCommentWithAuthor(rows)
+		if err != nil {
+			return nil, err
+		}
+		comments = append(comments, comment)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return comments, nil
+}
+
+func commentSelectSQL(whereClause, suffix string) string {
+	return `
+		SELECT
+			c.id,
+			c.post_id,
+			c.user_id,
+			c.parent_comment_id,
+			c.content,
+			c.image_url,
+			c.like_count,
+			c.dislike_count,
+			c.created_at,
+			c.deleted_at,
+			c.updated_at,
+			u.id,
+			u.first_name,
+			u.last_name,
+			u.nickname,
+			u.avatar,
+			COALESCE(cv.vote, 'none') AS viewer_vote
+		FROM comments c
+		LEFT JOIN users u ON u.id = c.user_id
+		LEFT JOIN comment_votes cv ON cv.comment_id = c.id AND cv.user_id = ?
+		WHERE ` + whereClause + suffix
+}
+
+func scanCommentWithAuthor(scanner rowScanner) (*models.CommentWithAuthor, error) {
+	var (
+		commentID       string
+		postID          string
+		userID          sql.NullString
+		parentCommentID sql.NullString
+		content         string
+		imageURL        sql.NullString
+		createdAt       string
+		deletedAt       sql.NullString
+		updatedAt       sql.NullString
+		authorID        sql.NullString
+		firstName       sql.NullString
+		lastName        sql.NullString
+		nickname        sql.NullString
+		avatar          sql.NullString
+		viewerVote      string
+		comment         models.Comment
+	)
+
+	err := scanner.Scan(
+		&commentID,
+		&postID,
+		&userID,
+		&parentCommentID,
+		&content,
+		&imageURL,
+		&comment.LikeCount,
+		&comment.DislikeCount,
+		&createdAt,
+		&deletedAt,
+		&updatedAt,
+		&authorID,
+		&firstName,
+		&lastName,
+		&nickname,
+		&avatar,
+		&viewerVote,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := uuid.FromString(commentID)
+	if err != nil {
+		return nil, err
+	}
+	parsedPostID, err := uuid.FromString(postID)
+	if err != nil {
+		return nil, err
+	}
+	parsedUserID, err := nullableUUID(userID)
+	if err != nil {
+		return nil, err
+	}
+	parsedParentID, err := nullableUUID(parentCommentID)
+	if err != nil {
+		return nil, err
+	}
+	parsedCreatedAt, err := parseSQLiteTime(createdAt)
+	if err != nil {
+		return nil, err
+	}
+	parsedDeletedAt, err := nullableTime(deletedAt)
+	if err != nil {
+		return nil, err
+	}
+	parsedUpdatedAt, err := nullableTime(updatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	comment.ID = id
+	comment.PostID = parsedPostID
+	comment.UserID = parsedUserID
+	comment.ParentCommentID = parsedParentID
+	comment.Content = content
+	comment.ImageURL = nullableString(imageURL)
+	comment.CreatedAt = parsedCreatedAt
+	comment.DeletedAt = parsedDeletedAt
+	comment.UpdatedAt = parsedUpdatedAt
+
+	return &models.CommentWithAuthor{
+		Comment:    comment,
+		Author:     scanPublicUser(authorID, firstName, lastName, nickname, avatar),
+		ViewerVote: models.ViewerVote(viewerVote),
+	}, nil
+}
+
+func nullableUUIDArg(value *uuid.UUID) any {
+	if value == nil {
+		return nil
+	}
+	return value.String()
+}
+
+func nullableStringArg(value *string) any {
+	if value == nil {
+		return nil
+	}
+	return *value
+}
+
+func nullableTimeArg(value *time.Time) any {
+	if value == nil {
+		return nil
+	}
+	return *value
+}
