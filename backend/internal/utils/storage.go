@@ -11,8 +11,10 @@ import (
 )
 
 const (
+	// MaxImageSize is the maximum accepted image payload size.
 	MaxImageSize = 5 * 1024 * 1024 // 5 MiB
-	ImageDir     = "./uploads/images"
+	// ImageDir is the default directory used when no upload directory is provided.
+	ImageDir = "./uploads/images"
 )
 
 var allowedTypes = map[string]string{
@@ -21,6 +23,7 @@ var allowedTypes = map[string]string{
 	"image/gif":  ".gif",
 }
 
+// SaveImage validates and stores a JPEG, PNG, or GIF image in the target directory.
 func SaveImage(file io.ReadSeeker, directory string) (string, error) {
 	buffer := make([]byte, 512)
 
@@ -75,6 +78,7 @@ func SaveImage(file io.ReadSeeker, directory string) (string, error) {
 	return directory + filename, nil
 }
 
+// DeleteImage removes an image path previously returned by SaveImage.
 func DeleteImage(path string) error {
 	if path == "" {
 		return nil
