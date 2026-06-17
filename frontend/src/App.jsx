@@ -16,9 +16,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Layout />} />
-      <Route path="/" index element={<Home />} />
-      <Route path="/post/:id" index element={<PostDetail />} />
+      <Route path="/post/:id" element={<PostDetail />} />
       <Route path="/register" element={<RegisterForm />} />
       <Route path="/login" element={<LoginForm />} />
       <Route
