@@ -2,11 +2,12 @@ package repositories
 
 import (
 	"database/sql"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
-	_ "github.com/mattn/go-sqlite3"
+	dbpkg "learn.zone01kisumu.ke/git/qquinton/social-network/internal/db"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
 )
 
@@ -231,119 +232,13 @@ type feedPrivacySeedIDs struct {
 func newPostCommentTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := dbpkg.InitDB(filepath.Join(t.TempDir(), "repository.db"), filepath.Join("..", "db", "migrations"))
 	if err != nil {
-		t.Fatalf("open sqlite: %v", err)
+		t.Fatalf("InitDB returned error: %v", err)
 	}
 	t.Cleanup(func() {
 		_ = db.Close()
 	})
-	if _, err := db.Exec(`PRAGMA foreign_keys = ON`); err != nil {
-		t.Fatalf("enable foreign keys: %v", err)
-	}
-
-	schema := `
-		CREATE TABLE users (
-			id TEXT PRIMARY KEY,
-			email TEXT NOT NULL UNIQUE,
-			password_hash TEXT NOT NULL,
-			first_name TEXT NOT NULL,
-			last_name TEXT NOT NULL,
-			dob TEXT NOT NULL,
-			avatar TEXT,
-			nickname TEXT,
-			about_me TEXT,
-			is_public INTEGER NOT NULL DEFAULT 1,
-			follower_count INTEGER NOT NULL DEFAULT 0,
-			following_count INTEGER NOT NULL DEFAULT 0,
-			created_at TEXT NOT NULL
-		);
-		CREATE TABLE posts (
-			id TEXT PRIMARY KEY,
-			user_id TEXT,
-			group_id TEXT,
-			content TEXT,
-			image_url TEXT,
-			privacy TEXT NOT NULL CHECK (privacy IN ('public', 'almost_private', 'private')),
-			comment_count INTEGER NOT NULL DEFAULT 0,
-			like_count INTEGER NOT NULL DEFAULT 0,
-			dislike_count INTEGER NOT NULL DEFAULT 0,
-			created_at TEXT NOT NULL,
-			updated_at TEXT,
-			deleted_at TEXT,
-			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-		);
-		CREATE TABLE followers (
-			follower_id TEXT NOT NULL,
-			followee_id TEXT NOT NULL,
-			status TEXT NOT NULL CHECK (status IN ('pending', 'accepted')),
-			created_at TEXT NOT NULL,
-			PRIMARY KEY (follower_id, followee_id),
-			FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
-			FOREIGN KEY (followee_id) REFERENCES users(id) ON DELETE CASCADE
-		);
-		CREATE TABLE groups (
-			id TEXT PRIMARY KEY,
-			creator_id TEXT,
-			title TEXT NOT NULL,
-			description TEXT,
-			created_at TEXT NOT NULL,
-			FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL
-		);
-		CREATE TABLE group_members (
-			group_id TEXT NOT NULL,
-			user_id TEXT NOT NULL,
-			status TEXT NOT NULL CHECK (status IN ('pending_invite', 'pending_request', 'accepted')),
-			PRIMARY KEY (group_id, user_id),
-			FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
-			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-		);
-		CREATE TABLE post_audiences (
-			post_id TEXT NOT NULL,
-			user_id TEXT NOT NULL,
-			PRIMARY KEY (post_id, user_id),
-			FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
-			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-		);
-		CREATE TABLE post_votes (
-			post_id TEXT NOT NULL,
-			user_id TEXT NOT NULL,
-			vote TEXT NOT NULL CHECK (vote IN ('like', 'dislike')),
-			created_at TEXT NOT NULL,
-			updated_at TEXT,
-			PRIMARY KEY (post_id, user_id),
-			FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
-			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-		);
-		CREATE TABLE comments (
-			id TEXT PRIMARY KEY,
-			post_id TEXT NOT NULL,
-			user_id TEXT,
-			parent_comment_id TEXT,
-			content TEXT,
-			image_url TEXT,
-			like_count INTEGER NOT NULL DEFAULT 0,
-			dislike_count INTEGER NOT NULL DEFAULT 0,
-			created_at TEXT NOT NULL,
-			deleted_at TEXT,
-			updated_at TEXT,
-			FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
-			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-			FOREIGN KEY (parent_comment_id) REFERENCES comments(id)
-		);
-		CREATE TABLE comment_votes (
-			comment_id TEXT NOT NULL,
-			user_id TEXT NOT NULL,
-			vote TEXT NOT NULL CHECK (vote IN ('like', 'dislike')),
-			created_at TEXT NOT NULL,
-			updated_at TEXT,
-			PRIMARY KEY (comment_id, user_id),
-			FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
-			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-		);`
-	if _, err := db.Exec(schema); err != nil {
-		t.Fatalf("create schema: %v", err)
-	}
 	return db
 }
 
