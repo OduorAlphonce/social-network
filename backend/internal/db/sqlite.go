@@ -22,7 +22,7 @@ func InitDB(dbPath string, migrationsDir string) (*sql.DB, error) {
 		}
 	}
 
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite3", sqliteDSN(dbPath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -39,6 +39,13 @@ func InitDB(dbPath string, migrationsDir string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func sqliteDSN(dbPath string) string {
+	if strings.Contains(dbPath, "?") {
+		return dbPath + "&_foreign_keys=on"
+	}
+	return dbPath + "?_foreign_keys=on"
 }
 
 func runMigrations(db *sql.DB, migrationsDir string) error {

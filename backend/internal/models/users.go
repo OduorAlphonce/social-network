@@ -70,6 +70,19 @@ type UserResponse struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type UpdateUserRequest struct {
+	Email           string `json:"email"`
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
+	DateOfBirth     string `json:"date_of_birth"`
+	Avatar          string `json:"avatar"`
+	Nickname        string `json:"nickname"`
+	AboutMe         string `json:"about_me"`
+	IsPublic        bool   `json:"is_public"`
+}
+
 type FollowRequestInput struct {
 	FollowingID string `json:"following_id"`
 }

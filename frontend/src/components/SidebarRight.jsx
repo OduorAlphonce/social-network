@@ -32,13 +32,13 @@ const SidebarRight = () => {
 
   return (
     <div className="quick-links ">
-      <div classname="upcoming-events card">
+      <div className="upcoming-events card">
         <strong>Upcoming Events</strong>
         {events.map((it) => (
-          <UpcomingEvent event={it} />
+          <UpcomingEvent key={it.id} event={it} />
         ))}
       </div>
-      <div classname="contacts card">
+      <div className="contacts card">
         <strong>Contacts</strong>
       </div>
     </div>

@@ -57,9 +57,15 @@ func (ur *userRepository) GetUserByEmail(email string) (*models.User, error) {
 	return u, nil
 }
 
-// UpdateUserProfile is a stub to satisfy the interface; @aloduor is implementing this.
-func (ur *userRepository) UpdateUserProfile(id uuid.UUID) (*models.User, error) {
-	return nil, errors.New("not implemented")
+// UpdateUserProfile updates an existing user's profile information in the database.
+func (ur *userRepository) UpdateUserProfile(u *models.User) error {
+	query := `
+		UPDATE users 
+		SET email = ?, password_hash = ?, first_name = ?, last_name = ?, dob = ?, avatar = ?, nickname = ?, about_me = ?, is_public = ?
+		WHERE id = ?
+	`
+	_, err := ur.db.Exec(query, u.Email, u.PassHash, u.FirstName, u.LastName, u.DOB, u.Avatar, u.Nickname, u.AboutMe, u.IsPublic, u.ID.String())
+	return err
 }
 
 // DeleteUser is a stub to satisfy the interface; @fcharles is implementing this.

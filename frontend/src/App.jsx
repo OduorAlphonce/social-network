@@ -8,12 +8,31 @@ import Friends from "./pages/Friends.jsx";
 import Profile from "./pages/Profile.jsx";
 import Messages from "./pages/Messages.jsx";
 import Notifications from "./pages/Notifications.jsx";
+import PostDetail from "./pages/PostDetail.jsx";
+import RegisterForm from "./components/RegisterForm";
+import LoginForm from "./components/LoginForm";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { useAuth } from "./context/useAuth.js";
 
 function App() {
+  const { isAuthenticated} = useAuth()
   return (
     <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route path="/" index element={<Home />} />
+      {/* If not authenticated, display this page without <Layout/>*/}
+      {!isAuthenticated && <Route path="/post/:id" element={<PostDetail />} />}
+      <Route path="/register" element={<RegisterForm />} />
+      <Route path="/login" element={<LoginForm />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Home />} />
+        {/* If not authenticated, display this page within <Layout/>*/}
+        <Route path="/post/:id" element={<PostDetail />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/friends" element={<Friends />} />
         <Route path="/events" element={<Events />} />

@@ -2,7 +2,6 @@
   display: flex;
   flex-direction: row;
   width: 100%;
-  background: rgba(239, 240, 247, 0.726);
 }
 .posts {
   display: flex;

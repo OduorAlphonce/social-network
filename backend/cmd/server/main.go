@@ -33,18 +33,18 @@ func main() {
 	sessionRepo := repositories.NewSessionRepository(database)
 	followerRepo := repositories.NewFollowerRepository(database)
 	postRepo := repositories.NewPostRepository(database)
-	interactionRepo := repositories.NewInteractionRepository(database)  
+	groupMembershipRepo := repositories.NewGroupMembershipRepository(database)
 
 	userService := services.NewUserService(userRepo, sessionRepo)
 	followerService := services.NewFollowerService(followerRepo, userRepo)
-	
-	permChecker := services.NewPermissionService(followerRepo) 
-	postService := services.NewPostService(postRepo, interactionRepo, permChecker)
+	postService := services.NewPostService(postRepo, userRepo, followerRepo, groupMembershipRepo)
 
 	userHandler := handlers.NewUserHandler(userService)
 	followerHandler := handlers.NewFollowerHandler(followerService, userService)
-	postHandler := handlers.NewPostHandler(postService) 
+	postHandler := handlers.NewPostHandler(postService)
 	authMiddleware := middleware.Auth(userService)
+
+	// Register Routes
 	handler := routers.RegisterRoutes(userHandler, followerHandler, postHandler, authMiddleware, config.App.AllowedOrigin)
 
 	address := net.JoinHostPort(config.App.BaseAddress, config.App.Port)

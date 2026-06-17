@@ -15,6 +15,17 @@ The implemented migration set currently creates:
 - `users`
 - `sessions`
 - `followers`
+- `groups`
+- `group_members`
+- `posts`
+- `post_audiences`
+- `comments`
+- `post_votes`
+- `comment_votes`
+
+The group tables are the minimal cross-team contract required by group-scoped
+posts and membership checks. Full group workflows, invitations, events, and
+related APIs are implemented separately.
 
 When changing the database, add paired `.up.sql` and `.down.sql` migration files
 and update the DBML document when the conceptual model changes. See
