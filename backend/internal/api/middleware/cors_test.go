@@ -14,7 +14,7 @@ func TestCorsMiddlewareAllowsCredentialedPatchPreflight(t *testing.T) {
 	config.App.AllowedOrigin = "http://localhost:5173"
 	handler := CorsMiddleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		nextCalled = true
-	}) )
+	}))
 
 	request := httptest.NewRequest(http.MethodOptions, "/api/posts/123", nil)
 	request.Header.Set("Origin", "http://localhost:5173")

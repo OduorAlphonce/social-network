@@ -16,6 +16,7 @@ import (
 func RegisterRoutes(
 	userHandler *handlers.UserHandler,
 	followerHandler *handlers.FollowerHandler,
+	postHandler *handlers.PostHandler,
 	authMiddleware func(http.Handler) http.Handler,
 	allowedOrigin string,
 ) http.Handler {
@@ -48,6 +49,8 @@ func RegisterRoutes(
 	mux.Handle("/api/followers/reject", authMiddleware(http.HandlerFunc(followerHandler.RejectFollow)))
 	mux.Handle("/api/followers/followers", authMiddleware(http.HandlerFunc(followerHandler.GetFollowers)))
 	mux.Handle("/api/followers/following", authMiddleware(http.HandlerFunc(followerHandler.GetFollowing)))
+	mux.Handle("/api/posts", authMiddleware(http.HandlerFunc(postHandler.Feed)))
+	mux.Handle("/api/users/{id}/posts", authMiddleware(http.HandlerFunc(postHandler.ProfilePosts)))
 
 	return middleware.CorsMiddleware(mux)
 }

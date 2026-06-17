@@ -15,7 +15,7 @@ func SuccessResponse(w http.ResponseWriter, data any, status int) {
 
 // ErrorResponse writes a standard JSON error envelope with the provided status
 // and error message.
-func ErrorResponse(w http.ResponseWriter, message string,status int) {
+func ErrorResponse(w http.ResponseWriter, message string, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})

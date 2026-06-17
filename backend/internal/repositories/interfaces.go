@@ -37,6 +37,9 @@ type PostRepository interface {
 	CreatePost(post *models.Post) error
 	GetPostByID(id, viewerID uuid.UUID) (*models.PostWithAuthor, error)
 	ListPosts(query models.PostQuery, viewerID uuid.UUID) ([]*models.PostWithAuthor, error)
+	ListHomeFeed(viewerID uuid.UUID, limit, offset int) ([]*models.PostWithAuthor, error)
+	ListProfilePosts(profileUserID, viewerID uuid.UUID, limit, offset int) ([]*models.PostWithAuthor, error)
+	ListGroupFeed(groupID, viewerID uuid.UUID, limit, offset int) ([]*models.PostWithAuthor, error)
 }
 
 // CommentRepository stores comments and returns comment rows hydrated with viewer state.
@@ -65,4 +68,9 @@ type CommentVoteRepository interface {
 	SetCommentVote(commentID, userID uuid.UUID, vote models.VoteValue) (*models.VoteSummary, error)
 	DeleteCommentVote(commentID, userID uuid.UUID) (*models.VoteSummary, error)
 	GetCommentVoteSummary(commentID, viewerID uuid.UUID) (*models.VoteSummary, error)
+}
+
+// GroupMembershipRepository reads group membership state needed by scoped features.
+type GroupMembershipRepository interface {
+	IsAcceptedGroupMember(groupID, userID uuid.UUID) (bool, error)
 }

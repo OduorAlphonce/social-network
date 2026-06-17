@@ -121,6 +121,22 @@ type PostQuery struct {
 	Offset   int
 }
 
+// Pagination describes offset pagination state for list responses.
+type Pagination struct {
+	Limit   int  `json:"limit"`
+	Offset  int  `json:"offset"`
+	HasMore bool `json:"has_more"`
+}
+
+// PostListResponse is the OpenAPI response envelope for paginated post feeds.
+type PostListResponse struct {
+	Status     string            `json:"status"`
+	Message    string            `json:"message"`
+	Data       []PostResponse    `json:"data"`
+	Errors     map[string]string `json:"errors"`
+	Pagination Pagination        `json:"pagination"`
+}
+
 // PostWithAuthor is a repository read model with hydrated author and viewer state.
 type PostWithAuthor struct {
 	Post       Post

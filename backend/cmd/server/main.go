@@ -33,18 +33,22 @@ func main() {
 	userRepo := repositories.NewUserRepository(database)
 	sessionRepo := repositories.NewSessionRepository(database)
 	followerRepo := repositories.NewFollowerRepository(database)
+	postRepo := repositories.NewPostRepository(database)
+	groupMembershipRepo := repositories.NewGroupMembershipRepository(database)
 
 	// Initialize services
 	userService := services.NewUserService(userRepo, sessionRepo)
 	followerService := services.NewFollowerService(followerRepo, userRepo)
+	postService := services.NewPostService(postRepo, userRepo, followerRepo, groupMembershipRepo)
 
 	// Initialize handlers and middleware
 	userHandler := handlers.NewUserHandler(userService)
 	followerHandler := handlers.NewFollowerHandler(followerService, userService)
+	postHandler := handlers.NewPostHandler(postService)
 	authMiddleware := middleware.Auth(userService)
 
 	// Register Routes
-	handler := routers.RegisterRoutes(userHandler, followerHandler, authMiddleware, config.App.AllowedOrigin)
+	handler := routers.RegisterRoutes(userHandler, followerHandler, postHandler, authMiddleware, config.App.AllowedOrigin)
 
 	address := net.JoinHostPort(config.App.BaseAddress, config.App.Port)
 	log.Printf("Server starting on %s...", address)
