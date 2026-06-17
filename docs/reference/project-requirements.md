@@ -117,8 +117,8 @@ Create a Docker image for the frontend of your social network application. This 
 
 - Name your frontend Docker image appropriately.
 - Make sure that the backend container exposes the necessary ports for communication with the
-frontend and external clients and the frontend container exposes the appropriate port to serve
-the frontend content to users' browsers.
+  frontend and external clients and the frontend container exposes the appropriate port to serve
+  the frontend content to users' browsers.
 
 ## Authentication
 
@@ -187,7 +187,7 @@ the creator and he/she can invite other users to join the group.
 The invited users need to accept the invitation to be part of the group.
 They can also invite other people once they are already part of the group.
 Another way to enter the group is to request to be in it and only the creator of the group would be
- allowed to accept or refuse the request.
+allowed to accept or refuse the request.
 
 To make a request to enter a group the user must find it first.
 This will be possible by having a section where you can browse through all groups.
@@ -242,7 +242,7 @@ Every other notification created by you that isn't on the list is welcomed too.
 - [migration](https://pkg.go.dev/github.com/Boostport/migration)
 - [sqlite3](https://github.com/mattn/go-sqlite3)
 - [bcrypt](https://pkg.go.dev/golang.org/x/crypto/bcrypt)
-- [gofrs/uuid](https://github.com/gofrs/uuid) or [google/uuid](https://github.com/google/uuid)
+- [gofrs/uuid](https://github.com/gofrs/uuid)
 
 ---
 

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/google/uuid"
+	"github.com/gofrs/uuid/v5"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
 )
 
@@ -19,10 +19,10 @@ func NewPostHandler(ps *services.PostService) *PostHandler {
 
 func (h *PostHandler) GetSinglePost(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	
+
 	postID := r.PathValue("id")
 
-	if err := uuid.Validate(postID); err != nil {
+	if _, err := uuid.FromString(postID); err != nil {
 		h.sendError(w, http.StatusBadRequest, "shared_validation_error: malformed id")
 		return
 	}
