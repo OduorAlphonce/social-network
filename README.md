@@ -51,3 +51,7 @@ Planned in the project specifications but not yet implemented end to end:
 ├── docs/          Setup, API, database, and reference documentation
 └── CONTRIBUTING.md
 ```
+
+## Project Design
+
+https://miro.com/app/board/uXjVHKn_cVY=/?share_link_id=101358376740
