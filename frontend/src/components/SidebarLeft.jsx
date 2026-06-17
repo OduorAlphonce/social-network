@@ -8,6 +8,7 @@ const SidebarLeft = () => {
   const navigate = useNavigate();
   return (
     <aside className="sidebar">
+      <ul>
       <li className="links" onClick={() => navigate("/")}>
         <BiHome /> Home
       </li>
@@ -34,6 +35,7 @@ const SidebarLeft = () => {
         <MdOutlineEvent />
         Events
       </li>
+      </ul>
     </aside>
   );
 };
