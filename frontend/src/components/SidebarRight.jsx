@@ -35,7 +35,7 @@ const SidebarRight = () => {
       <div className="upcoming-events card">
         <strong>Upcoming Events</strong>
         {events.map((it) => (
-          <UpcomingEvent event={it} />
+          <UpcomingEvent key={it.id} event={it} />
         ))}
       </div>
       <div className="contacts card">
