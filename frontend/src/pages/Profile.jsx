@@ -1,5 +1,11 @@
+import ProfileUpdateForm from '../components/ProfileUpdateForm';
+
 const Profile = () => {
-  return <div>Profile</div>;
+  return (
+    <div className="profile-page">
+      <ProfileUpdateForm />
+    </div>
+  );
 };
 
 export default Profile;

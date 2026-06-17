@@ -41,6 +41,7 @@ func RegisterRoutes(
 
 	// Authenticated routes
 	mux.Handle("/api/users/me", http.HandlerFunc(userHandler.Me))
+	mux.Handle("/api/users/update", http.HandlerFunc(userHandler.Update))
 	mux.HandleFunc("/api/users/logout", userHandler.Logout)
 
 	mux.Handle("/api/followers/follow", authMiddleware(http.HandlerFunc(followerHandler.Follow)))

@@ -10,7 +10,7 @@ type UserRepository interface {
 	CreateUser(user *models.User) error
 	GetUserByID(id uuid.UUID) (*models.User, error)
 	GetUserByEmail(email string) (*models.User, error)
-	UpdateUserProfile(id uuid.UUID) (*models.User, error)
+	UpdateUserProfile(user *models.User)  error
 	DeleteUser(id uuid.UUID) error
 }
 
