@@ -296,7 +296,7 @@ func (h *FollowerHandler) verifyAccess(currentUserID, targetUserID uuid.UUID) er
 	}
 
 	if status != string(models.Accepted) {
-		return errors.New("profile is private. You must follow this user to view their activity.")
+		return errors.New("profile is private. You must follow this user to view their activity")
 	}
 
 	return nil
