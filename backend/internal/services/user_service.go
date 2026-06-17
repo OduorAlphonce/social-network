@@ -17,6 +17,7 @@ type UserService interface {
 	Logout(sessionID string) error
 	Authenticate(sessionID string) (*models.User, error)
 	GetByID(id uuid.UUID) (*models.User, error)
+	Update(userID uuid.UUID, req *models.UpdateUserRequest) (*models.UserResponse, error)
 }
 
 type userService struct {
@@ -167,4 +168,81 @@ func (s *userService) Authenticate(sessionID string) (*models.User, error) {
 
 func (s *userService) GetByID(id uuid.UUID) (*models.User, error) {
 	return s.userRepo.GetUserByID(id)
+}
+
+func (s *userService) Update(userID uuid.UUID, req *models.UpdateUserRequest) (*models.UserResponse, error) {
+	user, err := s.userRepo.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.FirstName != "" {
+		user.FirstName = req.FirstName
+	}
+	if req.LastName != "" {
+		user.LastName = req.LastName
+	}
+	if req.Nickname != "" {
+		user.Nickname = req.Nickname
+	}
+	if req.AboutMe != "" {
+		user.AboutMe = req.AboutMe
+	}
+	if req.Avatar != "" {
+		user.Avatar = req.Avatar
+	}
+	user.IsPublic = req.IsPublic
+
+	if req.DateOfBirth != "" {
+		dob, err := time.Parse("2006-01-02", req.DateOfBirth)
+		if err != nil {
+			return nil, errors.New("invalid date of birth format")
+		}
+		user.DOB = dob
+	}
+
+	// Handle email and password changes
+	if req.Email != "" && req.Email != user.Email {
+		if req.CurrentPassword == "" {
+			return nil, errors.New("current password required to change email")
+		}
+		err = bcrypt.CompareHashAndPassword([]byte(user.PassHash), []byte(req.CurrentPassword))
+		if err != nil {
+			return nil, errors.New("invalid current password")
+		}
+		user.Email = req.Email
+	}
+
+	if req.NewPassword != "" {
+		if req.CurrentPassword == "" {
+			return nil, errors.New("current password required to change password")
+		}
+		err = bcrypt.CompareHashAndPassword([]byte(user.PassHash), []byte(req.CurrentPassword))
+		if err != nil {
+			return nil, errors.New("invalid current password")
+		}
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+		user.PassHash = string(hashedPassword)
+	}
+
+	err = s.userRepo.UpdateUserProfile(user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.UserResponse{
+		ID:          user.ID,
+		Email:       user.Email,
+		FirstName:   user.FirstName,
+		LastName:    user.LastName,
+		DateOfBirth: user.DOB.Format("2006-01-02"),
+		Avatar:      user.Avatar,
+		Nickname:    user.Nickname,
+		AboutMe:     user.AboutMe,
+		IsPublic:    user.IsPublic,
+		CreatedAt:   user.CreatedAt,
+	}, nil
 }
