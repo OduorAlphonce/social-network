@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -59,6 +60,31 @@ func TestUserServiceRegisterStoresHashAndReturnsSafeProfile(t *testing.T) {
 	}
 }
 
+func TestUserServiceRegisterRejectsDuplicateEmail(t *testing.T) {
+	users := newFakeUserRepository()
+	service := NewUserService(users, newFakeSessionRepository())
+	users.add(&models.User{
+		ID:        uuid.Must(uuid.NewV4()),
+		Email:     "amina@example.com",
+		PassHash:  "hash",
+		FirstName: "Amina",
+		LastName:  "Njeri",
+	})
+
+	_, err := service.Register(&models.CreateUserRequest{
+		Email:       "amina@example.com",
+		Password:    "secret1",
+		FirstName:   "Amina",
+		LastName:    "Njeri",
+		DateOfBirth: "1998-04-12",
+		IsPublic:    true,
+	})
+
+	if err == nil || err.Error() != "email already registered" {
+		t.Fatalf("error = %v, want duplicate email error", err)
+	}
+}
+
 func TestUserServiceLoginCreatesSessionForValidPassword(t *testing.T) {
 	users := newFakeUserRepository()
 	sessions := newFakeSessionRepository()
@@ -90,6 +116,29 @@ func TestUserServiceLoginCreatesSessionForValidPassword(t *testing.T) {
 	}
 }
 
+func TestUserServiceAuthenticateRejectsExpiredSessionAndDeletesIt(t *testing.T) {
+	users := newFakeUserRepository()
+	sessions := newFakeSessionRepository()
+	service := NewUserService(users, sessions)
+	userID := uuid.Must(uuid.FromString("6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1"))
+	sessionID := uuid.Must(uuid.FromString("0dd6e443-0998-4f50-a4cf-1a40a0536213"))
+	users.add(&models.User{ID: userID, Email: "amina@example.com"})
+	sessions.byID[sessionID] = &models.Session{
+		ID:        sessionID,
+		UserID:    userID,
+		ExpiresAt: time.Now().Add(-time.Minute),
+	}
+
+	_, err := service.Authenticate(sessionID.String())
+
+	if err == nil || err.Error() != "session expired" {
+		t.Fatalf("error = %v, want session expired", err)
+	}
+	if sessions.byID[sessionID] != nil {
+		t.Fatal("expected expired session to be deleted")
+	}
+}
+
 func TestUserServiceLoginRejectsInvalidPassword(t *testing.T) {
 	users := newFakeUserRepository()
 	service := NewUserService(users, newFakeSessionRepository())
@@ -109,6 +158,79 @@ func TestUserServiceLoginRejectsInvalidPassword(t *testing.T) {
 
 	if _, err := service.Login("amina@example.com", "wrong-password"); err == nil {
 		t.Fatal("expected invalid password to be rejected")
+	}
+}
+
+func TestUserServiceUpdateRequiresCurrentPasswordForSensitiveChanges(t *testing.T) {
+	users := newFakeUserRepository()
+	service := NewUserService(users, newFakeSessionRepository())
+	hash, err := bcrypt.GenerateFromPassword([]byte("secret1"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("GenerateFromPassword returned error: %v", err)
+	}
+	userID := uuid.Must(uuid.FromString("6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1"))
+	users.add(&models.User{
+		ID:        userID,
+		Email:     "amina@example.com",
+		PassHash:  string(hash),
+		FirstName: "Amina",
+		LastName:  "Njeri",
+		DOB:       time.Date(1998, 4, 12, 0, 0, 0, 0, time.UTC),
+		IsPublic:  true,
+	})
+
+	if _, err := service.Update(userID, &models.UpdateUserRequest{Email: "new@example.com"}); err == nil {
+		t.Fatal("expected email update without current password to fail")
+	}
+	if _, err := service.Update(userID, &models.UpdateUserRequest{NewPassword: "secret2"}); err == nil {
+		t.Fatal("expected password update without current password to fail")
+	}
+}
+
+func TestUserServiceUpdateChangesProfileAndPassword(t *testing.T) {
+	users := newFakeUserRepository()
+	service := NewUserService(users, newFakeSessionRepository())
+	hash, err := bcrypt.GenerateFromPassword([]byte("secret1"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("GenerateFromPassword returned error: %v", err)
+	}
+	userID := uuid.Must(uuid.FromString("6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1"))
+	users.add(&models.User{
+		ID:        userID,
+		Email:     "amina@example.com",
+		PassHash:  string(hash),
+		FirstName: "Amina",
+		LastName:  "Njeri",
+		DOB:       time.Date(1998, 4, 12, 0, 0, 0, 0, time.UTC),
+		IsPublic:  true,
+		CreatedAt: time.Date(2026, 6, 16, 12, 0, 0, 0, time.UTC),
+	})
+
+	response, err := service.Update(userID, &models.UpdateUserRequest{
+		Email:           "new@example.com",
+		CurrentPassword: "secret1",
+		NewPassword:     "secret2",
+		FirstName:       "New",
+		LastName:        "Name",
+		DateOfBirth:     "1999-05-13",
+		Nickname:        "nn",
+		AboutMe:         "updated",
+		Avatar:          "/uploads/avatars/new.png",
+		IsPublic:        false,
+	})
+	if err != nil {
+		t.Fatalf("Update returned error: %v", err)
+	}
+
+	stored := users.byID[userID]
+	if response.Email != "new@example.com" || response.FirstName != "New" || response.DateOfBirth != "1999-05-13" {
+		t.Fatalf("unexpected response: %#v", response)
+	}
+	if stored.Nickname != "nn" || stored.AboutMe != "updated" || stored.Avatar != "/uploads/avatars/new.png" || stored.IsPublic {
+		t.Fatalf("profile fields not updated: %#v", stored)
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(stored.PassHash), []byte("secret2")); err != nil {
+		t.Fatalf("updated password hash does not match: %v", err)
 	}
 }
 

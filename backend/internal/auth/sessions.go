@@ -20,6 +20,7 @@ func Create(db *sql.DB, w http.ResponseWriter, user_id uuid.UUID) error {
 		ID:        uuid.Must(uuid.NewV4()),
 		UserID:    user_id,
 		ExpiresAt: expires_at,
+		CreatedAt: time.Now(),
 	}
 
 	repo := repositories.NewSessionRepository(db)

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -132,12 +133,100 @@ func TestPostServiceGroupFeedRequiresAcceptedMembership(t *testing.T) {
 	}
 }
 
+func TestPostServiceGetSinglePostMapsPublicPost(t *testing.T) {
+	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	postID := uuid.Must(uuid.FromString("aaaaaaaa-0000-0000-0000-000000000001"))
+	posts := newFakePostRepository()
+	posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, nil)
+	service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+	viewer := viewerID.String()
+
+	response, err := service.GetSinglePost(context.Background(), postID.String(), &viewer)
+	if err != nil {
+		t.Fatalf("GetSinglePost returned error: %v", err)
+	}
+	active, ok := response.(*models.ActivePostResponse)
+	if !ok {
+		t.Fatalf("response type = %T, want active post", response)
+	}
+	if active.ID != postID || active.ViewerVote != models.ViewerVoteNone {
+		t.Fatalf("active response = %#v", active)
+	}
+	if posts.lastSingleID != postID || posts.lastSingleViewerID != viewerID {
+		t.Fatalf("repo ids = %s/%s, want %s/%s", posts.lastSingleID, posts.lastSingleViewerID, postID, viewerID)
+	}
+}
+
+func TestPostServiceGetSinglePostEnforcesAlmostPrivateFollowers(t *testing.T) {
+	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	authorID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000009"))
+	postID := uuid.Must(uuid.FromString("bbbbbbbb-0000-0000-0000-000000000001"))
+	posts := newFakePostRepository()
+	posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyAlmostPrivate, &authorID)
+	followers := newFakeFollowersRepository()
+	service := NewPostService(posts, newFakeUserRepository(), followers, newFakeGroupMembershipRepository())
+	viewer := viewerID.String()
+
+	if _, err := service.GetSinglePost(context.Background(), postID.String(), &viewer); !errors.Is(err, ErrPostForbidden) {
+		t.Fatalf("error = %v, want ErrPostForbidden", err)
+	}
+
+	followers.status[followerKey{followerID: viewerID, followeeID: authorID}] = models.Accepted
+	if _, err := service.GetSinglePost(context.Background(), postID.String(), &viewer); err != nil {
+		t.Fatalf("GetSinglePost accepted follower returned error: %v", err)
+	}
+}
+
+func TestPostServiceGetSinglePostRejectsPrivatePostUnlessOwner(t *testing.T) {
+	authorID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000009"))
+	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	postID := uuid.Must(uuid.FromString("cccccccc-0000-0000-0000-000000000001"))
+	posts := newFakePostRepository()
+	posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPrivate, &authorID)
+	service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+	viewer := viewerID.String()
+
+	if _, err := service.GetSinglePost(context.Background(), postID.String(), &viewer); !errors.Is(err, ErrPostForbidden) {
+		t.Fatalf("error = %v, want ErrPostForbidden", err)
+	}
+
+	owner := authorID.String()
+	if _, err := service.GetSinglePost(context.Background(), postID.String(), &owner); err != nil {
+		t.Fatalf("GetSinglePost owner returned error: %v", err)
+	}
+}
+
+func TestPostServiceGetSinglePostRequiresGroupMembership(t *testing.T) {
+	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	groupID := uuid.Must(uuid.FromString("20000000-0000-0000-0000-000000000001"))
+	postID := uuid.Must(uuid.FromString("dddddddd-0000-0000-0000-000000000001"))
+	posts := newFakePostRepository()
+	posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, nil)
+	posts.singleRow.Post.GroupID = &groupID
+	groups := newFakeGroupMembershipRepository()
+	service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), groups)
+	viewer := viewerID.String()
+
+	if _, err := service.GetSinglePost(context.Background(), postID.String(), &viewer); !errors.Is(err, ErrPostForbidden) {
+		t.Fatalf("error = %v, want ErrPostForbidden", err)
+	}
+
+	groups.accepted[groupMemberKey{groupID: groupID, userID: viewerID}] = true
+	if _, err := service.GetSinglePost(context.Background(), postID.String(), &viewer); err != nil {
+		t.Fatalf("GetSinglePost accepted group member returned error: %v", err)
+	}
+}
+
 type fakePostRepository struct {
-	homeRows    []*models.PostWithAuthor
-	profileRows []*models.PostWithAuthor
-	groupRows   []*models.PostWithAuthor
-	lastLimit   int
-	lastOffset  int
+	homeRows           []*models.PostWithAuthor
+	profileRows        []*models.PostWithAuthor
+	groupRows          []*models.PostWithAuthor
+	singleRow          *models.PostWithAuthor
+	singleErr          error
+	lastLimit          int
+	lastOffset         int
+	lastSingleID       uuid.UUID
+	lastSingleViewerID uuid.UUID
 }
 
 func newFakePostRepository() *fakePostRepository {
@@ -149,7 +238,15 @@ func (r *fakePostRepository) CreatePost(post *models.Post) error {
 }
 
 func (r *fakePostRepository) GetPostByID(id, viewerID uuid.UUID) (*models.PostWithAuthor, error) {
-	return nil, errors.New("not implemented")
+	r.lastSingleID = id
+	r.lastSingleViewerID = viewerID
+	if r.singleErr != nil {
+		return nil, r.singleErr
+	}
+	if r.singleRow == nil {
+		return nil, errors.New("post not found")
+	}
+	return r.singleRow, nil
 }
 
 func (r *fakePostRepository) ListPosts(query models.PostQuery, viewerID uuid.UUID) ([]*models.PostWithAuthor, error) {
@@ -217,4 +314,27 @@ func makePostRows(t *testing.T, count int) []*models.PostWithAuthor {
 		})
 	}
 	return rows
+}
+
+func makeSinglePostRow(t *testing.T, postID uuid.UUID, privacy models.PostPrivacy, authorID *uuid.UUID) *models.PostWithAuthor {
+	t.Helper()
+	if authorID == nil {
+		defaultAuthorID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000009"))
+		authorID = &defaultAuthorID
+	}
+	return &models.PostWithAuthor{
+		Post: models.Post{
+			ID:        postID,
+			UserID:    authorID,
+			Content:   "post",
+			Privacy:   privacy,
+			CreatedAt: time.Date(2026, 6, 16, 12, 0, 0, 0, time.UTC),
+		},
+		Author: &models.PublicUser{
+			ID:        *authorID,
+			FirstName: "Amina",
+			LastName:  "Njeri",
+		},
+		ViewerVote: models.ViewerVoteNone,
+	}
 }

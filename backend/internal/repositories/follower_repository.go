@@ -100,10 +100,21 @@ func (r *sqliteFollowerRepository) GetFollowers(userID uuid.UUID) ([]*models.Use
 	for rows.Next() {
 		u := &models.User{}
 		var avatar, nickname, aboutMe sql.NullString
-		err := rows.Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &u.DOB, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &u.CreatedAt)
+		var dob, createdAt string
+		err := rows.Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &dob, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &createdAt)
 		if err != nil {
 			return nil, err
 		}
+		parsedDOB, err := parseSQLiteTime(dob)
+		if err != nil {
+			return nil, err
+		}
+		parsedCreatedAt, err := parseSQLiteTime(createdAt)
+		if err != nil {
+			return nil, err
+		}
+		u.DOB = parsedDOB
+		u.CreatedAt = parsedCreatedAt
 		u.Avatar = avatar.String
 		u.Nickname = nickname.String
 		u.AboutMe = aboutMe.String
@@ -128,10 +139,21 @@ func (r *sqliteFollowerRepository) GetFollowing(userID uuid.UUID) ([]*models.Use
 	for rows.Next() {
 		u := &models.User{}
 		var avatar, nickname, aboutMe sql.NullString
-		err := rows.Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &u.DOB, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &u.CreatedAt)
+		var dob, createdAt string
+		err := rows.Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &dob, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &createdAt)
 		if err != nil {
 			return nil, err
 		}
+		parsedDOB, err := parseSQLiteTime(dob)
+		if err != nil {
+			return nil, err
+		}
+		parsedCreatedAt, err := parseSQLiteTime(createdAt)
+		if err != nil {
+			return nil, err
+		}
+		u.DOB = parsedDOB
+		u.CreatedAt = parsedCreatedAt
 		u.Avatar = avatar.String
 		u.Nickname = nickname.String
 		u.AboutMe = aboutMe.String

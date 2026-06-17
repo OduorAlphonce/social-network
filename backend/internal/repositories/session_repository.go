@@ -25,13 +25,24 @@ func (r *sqliteSessionRepository) CreateSession(s *models.Session) error {
 func (r *sqliteSessionRepository) GetSessionByID(id uuid.UUID) (*models.Session, error) {
 	query := `SELECT id, user_id, expires_at, created_at FROM sessions WHERE id = ?`
 	s := &models.Session{}
-	err := r.db.QueryRow(query, id).Scan(&s.ID, &s.UserID, &s.ExpiresAt, &s.CreatedAt)
+	var expiresAt, createdAt string
+	err := r.db.QueryRow(query, id).Scan(&s.ID, &s.UserID, &expiresAt, &createdAt)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("session not found")
 	}
 	if err != nil {
 		return nil, err
 	}
+	parsedExpiresAt, err := parseSQLiteTime(expiresAt)
+	if err != nil {
+		return nil, err
+	}
+	parsedCreatedAt, err := parseSQLiteTime(createdAt)
+	if err != nil {
+		return nil, err
+	}
+	s.ExpiresAt = parsedExpiresAt
+	s.CreatedAt = parsedCreatedAt
 	return s, nil
 }
 

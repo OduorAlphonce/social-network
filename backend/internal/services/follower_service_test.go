@@ -54,6 +54,53 @@ func TestFollowerServiceRejectsSelfFollow(t *testing.T) {
 	}
 }
 
+func TestFollowerServiceAcceptAndRejectRequirePendingRequests(t *testing.T) {
+	users := newFakeUserRepository()
+	followers := newFakeFollowersRepository()
+	service := NewFollowerService(followers, users)
+	followerID, targetID := followerTestIDs()
+	users.add(&models.User{ID: targetID, Email: "private@example.com", IsPublic: false})
+
+	if err := service.AcceptFollow(followerID, targetID); err == nil {
+		t.Fatal("expected accepting a missing request to fail")
+	}
+
+	status, err := service.Follow(followerID, targetID)
+	if err != nil {
+		t.Fatalf("Follow returned error: %v", err)
+	}
+	if status != string(models.Pending) {
+		t.Fatalf("status = %q, want pending", status)
+	}
+	if err := service.AcceptFollow(followerID, targetID); err != nil {
+		t.Fatalf("AcceptFollow returned error: %v", err)
+	}
+	if followers.status[followerKey{followerID: followerID, followeeID: targetID}] != models.Accepted {
+		t.Fatal("expected request to become accepted")
+	}
+	if err := service.RejectFollow(followerID, targetID); err == nil {
+		t.Fatal("expected rejecting an accepted relationship to fail")
+	}
+}
+
+func TestFollowerServiceRejectFollowRemovesPendingRequest(t *testing.T) {
+	users := newFakeUserRepository()
+	followers := newFakeFollowersRepository()
+	service := NewFollowerService(followers, users)
+	followerID, targetID := followerTestIDs()
+	users.add(&models.User{ID: targetID, Email: "private@example.com", IsPublic: false})
+
+	if _, err := service.Follow(followerID, targetID); err != nil {
+		t.Fatalf("Follow returned error: %v", err)
+	}
+	if err := service.RejectFollow(followerID, targetID); err != nil {
+		t.Fatalf("RejectFollow returned error: %v", err)
+	}
+	if followers.status[followerKey{followerID: followerID, followeeID: targetID}] != "" {
+		t.Fatal("expected pending request to be removed")
+	}
+}
+
 func followerTestIDs() (uuid.UUID, uuid.UUID) {
 	return uuid.Must(uuid.FromString("0dd6e443-0998-4f50-a4cf-1a40a0536213")),
 		uuid.Must(uuid.FromString("6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1"))

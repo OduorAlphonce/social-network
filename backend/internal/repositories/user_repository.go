@@ -27,13 +27,24 @@ func (ur *userRepository) GetUserByID(id uuid.UUID) (*models.User, error) {
 	query := `SELECT id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, follower_count, following_count, created_at FROM users WHERE id = ?`
 	u := &models.User{}
 	var avatar, nickname, aboutMe sql.NullString
-	err := ur.db.QueryRow(query, id).Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &u.DOB, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &u.CreatedAt)
+	var dob, createdAt string
+	err := ur.db.QueryRow(query, id).Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &dob, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &createdAt)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("user not found")
 	}
 	if err != nil {
 		return nil, err
 	}
+	parsedDOB, err := parseSQLiteTime(dob)
+	if err != nil {
+		return nil, err
+	}
+	parsedCreatedAt, err := parseSQLiteTime(createdAt)
+	if err != nil {
+		return nil, err
+	}
+	u.DOB = parsedDOB
+	u.CreatedAt = parsedCreatedAt
 	u.Avatar = avatar.String
 	u.Nickname = nickname.String
 	u.AboutMe = aboutMe.String
@@ -44,13 +55,24 @@ func (ur *userRepository) GetUserByEmail(email string) (*models.User, error) {
 	query := `SELECT id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, follower_count, following_count, created_at FROM users WHERE email = ?`
 	u := &models.User{}
 	var avatar, nickname, aboutMe sql.NullString
-	err := ur.db.QueryRow(query, email).Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &u.DOB, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &u.CreatedAt)
+	var dob, createdAt string
+	err := ur.db.QueryRow(query, email).Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &dob, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &createdAt)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("user not found")
 	}
 	if err != nil {
 		return nil, err
 	}
+	parsedDOB, err := parseSQLiteTime(dob)
+	if err != nil {
+		return nil, err
+	}
+	parsedCreatedAt, err := parseSQLiteTime(createdAt)
+	if err != nil {
+		return nil, err
+	}
+	u.DOB = parsedDOB
+	u.CreatedAt = parsedCreatedAt
 	u.Avatar = avatar.String
 	u.Nickname = nickname.String
 	u.AboutMe = aboutMe.String
