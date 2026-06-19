@@ -68,6 +68,10 @@ const Post = ({ post }) => {
     });
   };
 
+  const authorName = post?.author
+    ? (post.author.nickname || `${post.author.first_name || ""} ${post.author.last_name || ""}`.trim() || post.author.name)
+    : "Unknown User";
+
   return (
     <div className="post-container" onClick={(e) => openPost(e, post)}>
       <div className="top-bar">
@@ -79,7 +83,7 @@ const Post = ({ post }) => {
           />
 
           <div className="post-bio">
-            <h5>{post?.author?.name}</h5>
+            <h5>{authorName}</h5>
             <small>{DateFormatter(post?.created_at, renderedAt)}</small>
           </div>
         </div>
