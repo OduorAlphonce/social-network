@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS dm_threads;
+DROP TABLE IF EXISTS event_rsvps;
+DROP TABLE IF EXISTS events;

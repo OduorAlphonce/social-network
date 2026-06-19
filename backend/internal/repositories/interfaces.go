@@ -70,7 +70,51 @@ type CommentVoteRepository interface {
 	GetCommentVoteSummary(commentID, viewerID uuid.UUID) (*models.VoteSummary, error)
 }
 
-// GroupMembershipRepository reads group membership state needed by scoped features.
+// GroupRepository stores and reads groups.
+type GroupRepository interface {
+	CreateGroup(group *models.Group) error
+	GetGroupByID(id uuid.UUID) (*models.Group, error)
+	ListGroups() ([]*models.Group, error)
+}
+
+// GroupMembershipRepository reads and manages group membership state.
 type GroupMembershipRepository interface {
 	IsAcceptedGroupMember(groupID, userID uuid.UUID) (bool, error)
+	GetMembership(groupID, userID uuid.UUID) (string, error)
+	AddMembership(groupID, userID uuid.UUID, status string) error
+	UpdateMembershipStatus(groupID, userID uuid.UUID, status string) error
+	RemoveMembership(groupID, userID uuid.UUID) error
+	ListGroupMembers(groupID uuid.UUID) ([]*models.User, error)
+	ListPendingRequests(groupID uuid.UUID) ([]*models.User, error)
 }
+
+// EventRepository manages group events and RSVPs.
+type EventRepository interface {
+	CreateEvent(event *models.Event) error
+	GetEventByID(id uuid.UUID) (*models.Event, error)
+	ListEventsByGroup(groupID uuid.UUID) ([]*models.Event, error)
+	GetRSVP(eventID, userID uuid.UUID) (string, error)
+	SetRSVP(eventID, userID uuid.UUID, status string) error
+	GetRSVPSummaries(eventID uuid.UUID) (going int, notGoing int, err error)
+}
+
+// MessageRepository manages direct and group chat messages.
+type MessageRepository interface {
+	CreateMessage(message *models.Message) error
+	GetMessageByID(id uuid.UUID) (*models.Message, error)
+	ListMessagesByGroup(groupID uuid.UUID, limit, offset int) ([]*models.Message, error)
+	ListMessagesByThread(threadID uuid.UUID, limit, offset int) ([]*models.Message, error)
+	GetOrCreateDMThread(user1ID, user2ID uuid.UUID) (*models.DMThread, error)
+	GetDMThreadByID(id uuid.UUID) (*models.DMThread, error)
+	ListConversations(userID uuid.UUID) ([]*models.ConversationResponse, error)
+}
+
+// NotificationRepository manages notification persistence.
+type NotificationRepository interface {
+	CreateNotification(n *models.Notification) error
+	GetNotificationByID(id uuid.UUID) (*models.Notification, error)
+	ListNotificationsByUser(userID uuid.UUID) ([]*models.Notification, error)
+	MarkAsRead(id uuid.UUID) error
+	MarkAllAsRead(userID uuid.UUID) error
+}
+
