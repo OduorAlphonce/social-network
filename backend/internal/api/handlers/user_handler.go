@@ -56,15 +56,6 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		_, err = h.userService.Register(&req)
-		if err != nil {
-			if req.Avatar != "" {
-				_ = utils.DeleteImage(req.Avatar)
-			}
-
-			_ = utils.SendError(w, http.StatusBadRequest, err.Error(), nil)
-			return
-		}
 	} else {
 		// Handle JSON
 		err := json.NewDecoder(r.Body).Decode(&req)
@@ -76,6 +67,10 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	userResponse, err := h.userService.Register(&req)
 	if err != nil {
+		if req.Avatar != "" {
+			_ = utils.DeleteImage(req.Avatar)
+		}
+
 		_ = utils.SendError(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
@@ -153,7 +148,7 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := utils.SendSuccess(w, http.StatusOK, "User retrieved successfully", models.UserResponse{
+	_ = utils.SendSuccess(w, http.StatusOK, "User retrieved successfully", models.UserResponse{
 		ID:          user.ID,
 		Email:       user.Email,
 		FirstName:   user.FirstName,
@@ -165,8 +160,6 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		IsPublic:    user.IsPublic,
 		CreatedAt:   user.CreatedAt,
 	})
-
-	utils.SuccessResponse(w, response, http.StatusOK)
 }
 
 func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
