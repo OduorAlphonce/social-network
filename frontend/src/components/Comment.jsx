@@ -2,6 +2,10 @@ import "../styles/comment.css";
 import avatar from "../assets/user.svg";
 
 const Comment = ({ comment }) => {
+  const authorName = comment?.author
+    ? (comment.author.nickname || `${comment.author.first_name || ""} ${comment.author.last_name || ""}`.trim())
+    : comment?.name;
+
   return (
     <div id="comment-container">
       <img
@@ -11,7 +15,7 @@ const Comment = ({ comment }) => {
       />
       <div className="comment-body">
         <div className="comment-details">
-          <strong>{comment?.name}</strong>
+          <strong>{authorName || "Anonymous"}</strong>
           <p>{comment?.content}</p>
         </div>
         <div>
