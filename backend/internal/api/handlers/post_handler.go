@@ -56,8 +56,16 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	if vals, ok := r.Form["audience_ids"]; ok {
 		rawAudience = vals
 	}
-	if len(rawAudience) == 1 && strings.Contains(rawAudience[0], ",") {
-		rawAudience = strings.Split(rawAudience[0], ",")
+	if len(rawAudience) == 1 {
+		val := strings.TrimSpace(rawAudience[0])
+		if strings.HasPrefix(val, "[") && strings.HasSuffix(val, "]") {
+			var parsed []string
+			if err := json.Unmarshal([]byte(val), &parsed); err == nil {
+				rawAudience = parsed
+			}
+		} else if strings.Contains(val, ",") {
+			rawAudience = strings.Split(val, ",")
+		}
 	}
 
 	var audienceIDs []uuid.UUID
@@ -146,9 +154,7 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	success = true
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(response)
+	_ = utils.SendSuccess(w, http.StatusCreated, "Post created successfully", response)
 }
 
 func (h *PostHandler) GetSinglePost(w http.ResponseWriter, r *http.Request) {
