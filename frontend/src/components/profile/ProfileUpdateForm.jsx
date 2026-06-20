@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useAuth } from "../context/useAuth";
-import "../styles/profile.css";
-import { apiFetch } from "../utils/api";
+import { useAuth } from "../../context/useAuth";
+import "../../styles/profile.css";
+import { apiFetch } from "../../utils/api";
 
 const getProfileFormData = (currentUser) => ({
   email: currentUser.email || "",

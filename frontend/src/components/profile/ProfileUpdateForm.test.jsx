@@ -1,8 +1,8 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import ProfileUpdateForm from "./ProfileUpdateForm";
-import { renderWithProviders } from "../test/render";
-import { apiFetch } from "../utils/api";
+import ProfileUpdateForm from "../ProfileUpdateForm";
+import { renderWithProviders } from "../../test/render";
+import { apiFetch } from "../../utils/api";
 
 vi.mock("../utils/api", async (importOriginal) => {
   const original = await importOriginal();
