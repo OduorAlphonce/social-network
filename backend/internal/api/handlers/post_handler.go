@@ -194,6 +194,176 @@ func (h *PostHandler) extractViewerIDFromContext(r *http.Request) *string {
 	return &userIDStr
 }
 
+func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
+		return
+	}
+
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "multipart/form-data") {
+		_ = utils.SendError(w, http.StatusBadRequest, "Content-Type must be multipart/form-data", nil)
+		return
+	}
+
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, "Failed to parse multipart form", nil)
+		return
+	}
+
+	currentUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	postIDStr := r.PathValue("id")
+	if _, err := uuid.FromString(postIDStr); err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, "shared_validation_error: malformed id", nil)
+		return
+	}
+
+	var contentPtr *string
+	if r.MultipartForm != nil {
+		if vals, ok := r.MultipartForm.Value["content"]; ok && len(vals) > 0 {
+			val := vals[0]
+			contentPtr = &val
+		}
+	}
+
+	var privacyPtr *models.PostPrivacy
+	if r.MultipartForm != nil {
+		if vals, ok := r.MultipartForm.Value["privacy"]; ok && len(vals) > 0 {
+			val := models.PostPrivacy(strings.TrimSpace(vals[0]))
+			privacyPtr = &val
+		}
+	}
+
+	var audienceIDs []uuid.UUID
+	if r.MultipartForm != nil {
+		if vals, ok := r.MultipartForm.Value["audience_ids"]; ok {
+			var rawAudience []string = vals
+			if len(rawAudience) == 1 {
+				val := strings.TrimSpace(rawAudience[0])
+				if strings.HasPrefix(val, "[") && strings.HasSuffix(val, "]") {
+					var parsed []string
+					if err := json.Unmarshal([]byte(val), &parsed); err == nil {
+						rawAudience = parsed
+					}
+				} else if strings.Contains(val, ",") {
+					rawAudience = strings.Split(val, ",")
+				}
+			}
+
+			for _, idStr := range rawAudience {
+				idStr = strings.TrimSpace(idStr)
+				if idStr == "" {
+					continue
+				}
+				parsedID, err := uuid.FromString(idStr)
+				if err != nil {
+					_ = utils.SendError(w, http.StatusBadRequest, "Invalid input: malformed audience identifier", map[string]string{"audience_ids": "has an invalid format"})
+					return
+				}
+				audienceIDs = append(audienceIDs, parsedID)
+			}
+		}
+	}
+
+	removeImage := false
+	if r.MultipartForm != nil {
+		if vals, ok := r.MultipartForm.Value["remove_image"]; ok && len(vals) > 0 {
+			removeImage, _ = strconv.ParseBool(vals[0])
+		}
+	}
+
+	imageFile, _, err := r.FormFile("image")
+	hasImage := err == nil
+	if hasImage {
+		defer imageFile.Close()
+	}
+
+	var savedImagePath *string
+	var success bool
+	defer func() {
+		if !success && savedImagePath != nil {
+			_ = utils.DeleteImage(*savedImagePath)
+		}
+	}()
+
+	if hasImage {
+		path, err := utils.SaveImage(imageFile, "/uploads/posts/")
+		if err != nil {
+			_ = utils.SendError(w, http.StatusBadRequest, "Failed to save image", map[string]string{"image": err.Error()})
+			return
+		}
+		savedImagePath = &path
+	}
+
+	req := &models.UpdatePostRequest{
+		Content:     contentPtr,
+		Privacy:     privacyPtr,
+		AudienceIDs: audienceIDs,
+		ImageURL:    savedImagePath,
+		RemoveImage: removeImage,
+	}
+
+	response, err := h.postService.UpdatePost(r.Context(), postIDStr, req, currentUser.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrPostNotFound):
+			_ = utils.SendError(w, http.StatusNotFound, "Post not found", nil)
+		case errors.Is(err, services.ErrForbidden):
+			_ = utils.SendError(w, http.StatusForbidden, "Forbidden: you do not have permission to edit this post", nil)
+		case errors.Is(err, services.ErrPostOrCommentDeleted):
+			_ = utils.SendError(w, http.StatusConflict, "Post or selected parent comment is deleted", nil)
+		case errors.Is(err, services.ErrNotFollower):
+			_ = utils.SendError(w, http.StatusBadRequest, "Invalid audience: all members must be accepted followers", nil)
+		default:
+			_ = utils.SendError(w, http.StatusBadRequest, err.Error(), nil)
+		}
+		return
+	}
+
+	success = true
+	_ = utils.SendSuccess(w, http.StatusOK, "Post updated successfully", response)
+}
+
+func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
+		return
+	}
+
+	currentUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	postIDStr := r.PathValue("id")
+	if _, err := uuid.FromString(postIDStr); err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, "shared_validation_error: malformed id", nil)
+		return
+	}
+
+	response, err := h.postService.DeletePost(r.Context(), postIDStr, currentUser.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrPostNotFound):
+			_ = utils.SendError(w, http.StatusNotFound, "Post not found", nil)
+		case errors.Is(err, services.ErrForbidden):
+			_ = utils.SendError(w, http.StatusForbidden, "Forbidden: you do not have permission to delete this post", nil)
+		default:
+			_ = utils.SendError(w, http.StatusInternalServerError, "Internal server error", nil)
+		}
+		return
+	}
+
+	_ = utils.SendSuccess(w, http.StatusOK, "Post deleted successfully", response)
+}
+
 // Feed returns the authenticated user's home feed or a group feed.
 func (h *PostHandler) Feed(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -319,6 +489,108 @@ func (h *PostHandler) GetComments(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(response)
+}
+
+func (h *PostHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
+		return
+	}
+
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "multipart/form-data") {
+		_ = utils.SendError(w, http.StatusBadRequest, "Content-Type must be multipart/form-data", nil)
+		return
+	}
+
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, "Failed to parse multipart form", nil)
+		return
+	}
+
+	currentUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	postIDStr := r.PathValue("id")
+	postID, err := uuid.FromString(postIDStr)
+	if err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, "shared_validation_error: malformed id", nil)
+		return
+	}
+
+	content := strings.TrimSpace(r.FormValue("content"))
+	parentIDStr := strings.TrimSpace(r.FormValue("parent_comment_id"))
+
+	var parentCommentID *uuid.UUID
+	if parentIDStr != "" {
+		pID, err := uuid.FromString(parentIDStr)
+		if err != nil {
+			_ = utils.SendError(w, http.StatusBadRequest, "Invalid input: malformed parent comment identifier", map[string]string{"parent_comment_id": "has an invalid format"})
+			return
+		}
+		parentCommentID = &pID
+	}
+
+	imageFile, _, err := r.FormFile("image")
+	hasImage := err == nil
+	if hasImage {
+		defer imageFile.Close()
+	}
+
+	if content == "" && !hasImage {
+		_ = utils.SendError(w, http.StatusBadRequest, "Either content or image is required", map[string]string{"content": "is empty and no image uploaded"})
+		return
+	}
+
+	var savedImagePath *string
+	var success bool
+	defer func() {
+		if !success && savedImagePath != nil {
+			_ = utils.DeleteImage(*savedImagePath)
+		}
+	}()
+
+	if hasImage {
+		path, err := utils.SaveImage(imageFile, "/uploads/posts/")
+		if err != nil {
+			_ = utils.SendError(w, http.StatusBadRequest, "Failed to save image", map[string]string{"image": err.Error()})
+			return
+		}
+		savedImagePath = &path
+	}
+
+	req := &models.CreateCommentRequest{
+		PostID:          postID,
+		ParentCommentID: parentCommentID,
+		Content:         content,
+		ImageURL:        savedImagePath,
+	}
+
+	response, err := h.postService.CreateComment(r.Context(), req, currentUser.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrPostNotFound):
+			_ = utils.SendError(w, http.StatusNotFound, "Post not found", nil)
+		case errors.Is(err, services.ErrPostForbidden):
+			_ = utils.SendError(w, http.StatusForbidden, "You do not have access to this post", nil)
+		case errors.Is(err, services.ErrPostOrCommentDeleted):
+			_ = utils.SendError(w, http.StatusConflict, "Post or selected parent comment is deleted", nil)
+		case errors.Is(err, services.ErrCrossPostParent):
+			_ = utils.SendError(w, http.StatusBadRequest, "Parent comment belongs to a different post", nil)
+		case errors.Is(err, services.ErrCommentNotFound):
+			_ = utils.SendError(w, http.StatusBadRequest, "Parent comment not found", nil)
+		default:
+			_ = utils.SendError(w, http.StatusInternalServerError, "Internal server error", nil)
+		}
+		return
+	}
+
+	success = true
+	_ = utils.SendSuccess(w, http.StatusCreated, "Comment created successfully", response)
 }
 
 func parseFeedPagination(r *http.Request) (int, int, error) {
