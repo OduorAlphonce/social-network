@@ -278,6 +278,49 @@ func (h *PostHandler) writeFeedResponse(w http.ResponseWriter, response any, err
 	_ = json.NewEncoder(w).Encode(response)
 }
 
+func (h *PostHandler) GetComments(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
+		return
+	}
+
+	currentUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	postIDStr := r.PathValue("id")
+	if _, err := uuid.FromString(postIDStr); err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, "shared_validation_error: malformed id", nil)
+		return
+	}
+
+	limit, offset, err := parseFeedPagination(r)
+	if err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, "Invalid pagination", map[string]string{"pagination": err.Error()})
+		return
+	}
+
+	response, err := h.postService.GetCommentsByPost(r.Context(), postIDStr, currentUser.ID, limit, offset)
+	if err != nil {
+		if errors.Is(err, services.ErrPostNotFound) {
+			_ = utils.SendError(w, http.StatusNotFound, "Post not found", nil)
+			return
+		}
+		if errors.Is(err, services.ErrPostForbidden) {
+			_ = utils.SendError(w, http.StatusForbidden, "You do not have access to this post's comments", nil)
+			return
+		}
+		_ = utils.SendError(w, http.StatusInternalServerError, "Internal server error", nil)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(response)
+}
+
 func parseFeedPagination(r *http.Request) (int, int, error) {
 	limit, err := parseOptionalInt(r.URL.Query().Get("limit"))
 	if err != nil {
