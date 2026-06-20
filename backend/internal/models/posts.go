@@ -113,6 +113,15 @@ type VoteSummary struct {
 	ViewerVote   ViewerVote `json:"viewer_vote"`
 }
 
+// CreatePostRequest is the request payload for creating a post.
+type CreatePostRequest struct {
+	Content     string
+	Privacy     PostPrivacy
+	GroupID     *uuid.UUID
+	AudienceIDs []uuid.UUID
+	ImageURL    *string
+}
+
 // PostQuery filters reusable post-list repository reads.
 type PostQuery struct {
 	AuthorID *uuid.UUID
