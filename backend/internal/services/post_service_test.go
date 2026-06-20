@@ -8,13 +8,14 @@ import (
 
 	"github.com/gofrs/uuid/v5"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/repositories"
 )
 
 func TestPostServiceHomeFeedPaginationDefaultsAndHasMore(t *testing.T) {
 	posts := newFakePostRepository()
 	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
 	posts.homeRows = makePostRows(t, 21)
-	service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+	service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
 
 	response, err := service.GetHomeFeed(viewerID, 0, 0)
 	if err != nil {
@@ -35,7 +36,7 @@ func TestPostServiceHomeFeedPaginationDefaultsAndHasMore(t *testing.T) {
 }
 
 func TestPostServiceRejectsInvalidPagination(t *testing.T) {
-	service := NewPostService(newFakePostRepository(), newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+	service := newTestPostService(newFakePostRepository(), newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
 	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
 
 	tests := []struct {
@@ -95,7 +96,7 @@ func TestPostServiceProfileVisibility(t *testing.T) {
 			}
 			posts := newFakePostRepository()
 			posts.profileRows = makePostRows(t, 1)
-			service := NewPostService(posts, users, followers, newFakeGroupMembershipRepository())
+			service := newTestPostService(posts, users, followers, newFakeGroupMembershipRepository())
 
 			_, err := service.GetProfilePosts(profileID, viewerID, 20, 0)
 			if !errors.Is(err, tt.wantError) {
@@ -109,7 +110,7 @@ func TestPostServiceProfileOwnerCanViewOwnPrivateProfile(t *testing.T) {
 	userID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
 	posts := newFakePostRepository()
 	posts.profileRows = makePostRows(t, 1)
-	service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+	service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
 
 	if _, err := service.GetProfilePosts(userID, userID, 20, 0); err != nil {
 		t.Fatalf("GetProfilePosts owner returned error: %v", err)
@@ -120,7 +121,7 @@ func TestPostServiceGroupFeedRequiresAcceptedMembership(t *testing.T) {
 	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
 	groupID := uuid.Must(uuid.FromString("20000000-0000-0000-0000-000000000001"))
 	groups := newFakeGroupMembershipRepository()
-	service := NewPostService(newFakePostRepository(), newFakeUserRepository(), newFakeFollowersRepository(), groups)
+	service := newTestPostService(newFakePostRepository(), newFakeUserRepository(), newFakeFollowersRepository(), groups)
 
 	_, err := service.GetGroupFeed(groupID, viewerID, 20, 0)
 	if !errors.Is(err, ErrForbidden) {
@@ -138,7 +139,7 @@ func TestPostServiceGetSinglePostMapsPublicPost(t *testing.T) {
 	postID := uuid.Must(uuid.FromString("aaaaaaaa-0000-0000-0000-000000000001"))
 	posts := newFakePostRepository()
 	posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, nil)
-	service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+	service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
 	viewer := viewerID.String()
 
 	response, err := service.GetSinglePost(context.Background(), postID.String(), &viewer)
@@ -164,7 +165,7 @@ func TestPostServiceGetSinglePostEnforcesAlmostPrivateFollowers(t *testing.T) {
 	posts := newFakePostRepository()
 	posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyAlmostPrivate, &authorID)
 	followers := newFakeFollowersRepository()
-	service := NewPostService(posts, newFakeUserRepository(), followers, newFakeGroupMembershipRepository())
+	service := newTestPostService(posts, newFakeUserRepository(), followers, newFakeGroupMembershipRepository())
 	viewer := viewerID.String()
 
 	if _, err := service.GetSinglePost(context.Background(), postID.String(), &viewer); !errors.Is(err, ErrPostForbidden) {
@@ -183,7 +184,7 @@ func TestPostServiceGetSinglePostRejectsPrivatePostUnlessOwner(t *testing.T) {
 	postID := uuid.Must(uuid.FromString("cccccccc-0000-0000-0000-000000000001"))
 	posts := newFakePostRepository()
 	posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPrivate, &authorID)
-	service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+	service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
 	viewer := viewerID.String()
 
 	if _, err := service.GetSinglePost(context.Background(), postID.String(), &viewer); !errors.Is(err, ErrPostForbidden) {
@@ -196,6 +197,29 @@ func TestPostServiceGetSinglePostRejectsPrivatePostUnlessOwner(t *testing.T) {
 	}
 }
 
+func TestPostServiceGetSinglePostAllowsPrivatePostIfAudienceMember(t *testing.T) {
+	authorID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000009"))
+	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	nonAudienceID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000002"))
+	postID := uuid.Must(uuid.FromString("cccccccc-0000-0000-0000-000000000001"))
+
+	posts := newFakePostRepository()
+	posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPrivate, &authorID)
+	posts.audienceMembers[viewerID] = true // viewer is in the audience
+
+	service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+	
+	viewer := viewerID.String()
+	if _, err := service.GetSinglePost(context.Background(), postID.String(), &viewer); err != nil {
+		t.Fatalf("GetSinglePost audience member returned error: %v", err)
+	}
+
+	nonAudience := nonAudienceID.String()
+	if _, err := service.GetSinglePost(context.Background(), postID.String(), &nonAudience); !errors.Is(err, ErrPostForbidden) {
+		t.Fatalf("error = %v, want ErrPostForbidden", err)
+	}
+}
+
 func TestPostServiceGetSinglePostRequiresGroupMembership(t *testing.T) {
 	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
 	groupID := uuid.Must(uuid.FromString("20000000-0000-0000-0000-000000000001"))
@@ -204,7 +228,7 @@ func TestPostServiceGetSinglePostRequiresGroupMembership(t *testing.T) {
 	posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, nil)
 	posts.singleRow.Post.GroupID = &groupID
 	groups := newFakeGroupMembershipRepository()
-	service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), groups)
+	service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), groups)
 	viewer := viewerID.String()
 
 	if _, err := service.GetSinglePost(context.Background(), postID.String(), &viewer); !errors.Is(err, ErrPostForbidden) {
@@ -227,10 +251,13 @@ type fakePostRepository struct {
 	lastOffset         int
 	lastSingleID       uuid.UUID
 	lastSingleViewerID uuid.UUID
+	audienceMembers    map[uuid.UUID]bool
 }
 
 func newFakePostRepository() *fakePostRepository {
-	return &fakePostRepository{}
+	return &fakePostRepository{
+		audienceMembers: make(map[uuid.UUID]bool),
+	}
 }
 
 func (r *fakePostRepository) CreatePost(post *models.Post) error {
@@ -239,6 +266,18 @@ func (r *fakePostRepository) CreatePost(post *models.Post) error {
 
 func (r *fakePostRepository) CreatePostWithAudience(post *models.Post, audience []uuid.UUID) error {
 	return nil
+}
+
+func (r *fakePostRepository) ReplacePostAudience(postID uuid.UUID, userIDs []uuid.UUID) error {
+	return nil
+}
+
+func (r *fakePostRepository) ListPostAudience(postID uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+
+func (r *fakePostRepository) IsPostAudienceMember(postID, userID uuid.UUID) (bool, error) {
+	return r.audienceMembers[userID], nil
 }
 
 func (r *fakePostRepository) GetPostByID(id, viewerID uuid.UUID) (*models.PostWithAuthor, error) {
@@ -388,7 +427,7 @@ func TestPostServiceCreatePost(t *testing.T) {
 	t.Run("Create public post success", func(t *testing.T) {
 		posts := newFakePostRepository()
 		posts.singleRow = makeSinglePostRow(t, uuid.Nil, models.PostPrivacyPublic, &authorID)
-		service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+		service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
 
 		req := &models.CreatePostRequest{
 			Content: "Hello world",
@@ -410,7 +449,7 @@ func TestPostServiceCreatePost(t *testing.T) {
 	t.Run("Create group post fails if not a member", func(t *testing.T) {
 		posts := newFakePostRepository()
 		groups := newFakeGroupMembershipRepository()
-		service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), groups)
+		service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), groups)
 
 		req := &models.CreatePostRequest{
 			Content: "Hello group",
@@ -427,7 +466,7 @@ func TestPostServiceCreatePost(t *testing.T) {
 		posts.singleRow = makeSinglePostRow(t, uuid.Nil, models.PostPrivacyPublic, &authorID)
 		groups := newFakeGroupMembershipRepository()
 		groups.accepted[groupMemberKey{groupID: groupID, userID: authorID}] = true
-		service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), groups)
+		service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), groups)
 
 		req := &models.CreatePostRequest{
 			Content: "Hello group",
@@ -442,7 +481,7 @@ func TestPostServiceCreatePost(t *testing.T) {
 	t.Run("Create private post fails if audience is not accepted follower", func(t *testing.T) {
 		posts := newFakePostRepository()
 		followers := newFakeFollowersRepository()
-		service := NewPostService(posts, newFakeUserRepository(), followers, newFakeGroupMembershipRepository())
+		service := newTestPostService(posts, newFakeUserRepository(), followers, newFakeGroupMembershipRepository())
 
 		req := &models.CreatePostRequest{
 			Content:     "Hello private",
@@ -460,7 +499,7 @@ func TestPostServiceCreatePost(t *testing.T) {
 		posts.singleRow = makeSinglePostRow(t, uuid.Nil, models.PostPrivacyPrivate, &authorID)
 		followers := newFakeFollowersRepository()
 		followers.status[followerKey{followerID: followerID, followeeID: authorID}] = models.Accepted
-		service := NewPostService(posts, newFakeUserRepository(), followers, newFakeGroupMembershipRepository())
+		service := newTestPostService(posts, newFakeUserRepository(), followers, newFakeGroupMembershipRepository())
 
 		req := &models.CreatePostRequest{
 			Content:     "Hello private",
@@ -470,6 +509,135 @@ func TestPostServiceCreatePost(t *testing.T) {
 		_, err := service.CreatePost(context.Background(), req, authorID)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+type fakeCommentRepository struct {
+	comments []*models.CommentWithAuthor
+	err      error
+}
+
+func (f *fakeCommentRepository) CreateComment(comment *models.Comment) error {
+	return nil
+}
+
+func (f *fakeCommentRepository) GetCommentByID(id, viewerID uuid.UUID) (*models.CommentWithAuthor, error) {
+	return nil, nil
+}
+
+func (f *fakeCommentRepository) ListCommentTreeByPost(postID, viewerID uuid.UUID, limit, offset int) ([]*models.CommentWithAuthor, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.comments, nil
+}
+
+func newFakeCommentRepository() *fakeCommentRepository {
+	return &fakeCommentRepository{}
+}
+
+func newTestPostService(
+	postRepo repositories.PostRepository,
+	userRepo repositories.UserRepository,
+	followerRepo repositories.FollowersRepository,
+	groupMemberRepo repositories.GroupMembershipRepository,
+) PostService {
+	return NewPostService(postRepo, userRepo, followerRepo, groupMemberRepo, newFakeCommentRepository())
+}
+
+func TestPostServiceGetCommentsByPost(t *testing.T) {
+	authorID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000002"))
+	strangerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000003"))
+	postID := uuid.Must(uuid.FromString("cccccccc-0000-0000-0000-000000000001"))
+	commentID := uuid.Must(uuid.FromString("11111111-0000-0000-0000-000000000001"))
+
+	t.Run("Get comments fails if not authorized to view post", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyAlmostPrivate, &authorID)
+		followers := newFakeFollowersRepository()
+		comments := newFakeCommentRepository()
+		service := NewPostService(posts, newFakeUserRepository(), followers, newFakeGroupMembershipRepository(), comments)
+
+		_, err := service.GetCommentsByPost(context.Background(), postID.String(), strangerID, 10, 0)
+		if !errors.Is(err, ErrPostForbidden) {
+			t.Fatalf("expected ErrPostForbidden, got %v", err)
+		}
+	})
+
+	t.Run("Get comments success if authorized", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyAlmostPrivate, &authorID)
+		followers := newFakeFollowersRepository()
+		followers.status[followerKey{followerID: viewerID, followeeID: authorID}] = models.Accepted
+		comments := newFakeCommentRepository()
+		comments.comments = []*models.CommentWithAuthor{
+			{
+				Comment: models.Comment{
+					ID:        commentID,
+					PostID:    postID,
+					UserID:    &authorID,
+					Content:   "First comment",
+					CreatedAt: time.Now(),
+				},
+				Author: &models.PublicUser{
+					ID:        authorID,
+					FirstName: "Amina",
+					LastName:  "Njeri",
+				},
+				ViewerVote: models.ViewerVoteNone,
+			},
+		}
+		service := NewPostService(posts, newFakeUserRepository(), followers, newFakeGroupMembershipRepository(), comments)
+
+		resp, err := service.GetCommentsByPost(context.Background(), postID.String(), viewerID, 10, 0)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(resp.Data) != 1 {
+			t.Fatalf("expected 1 comment, got %d", len(resp.Data))
+		}
+		activeComment, ok := resp.Data[0].(*models.ActiveCommentResponse)
+		if !ok {
+			t.Fatalf("expected ActiveCommentResponse, got %T", resp.Data[0])
+		}
+		if activeComment.Content != "First comment" {
+			t.Fatalf("unexpected content: %s", activeComment.Content)
+		}
+	})
+
+	t.Run("Get comments success even if parent post is soft-deleted", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, &authorID)
+		deletedTime := time.Now()
+		posts.singleRow.Post.DeletedAt = &deletedTime
+		comments := newFakeCommentRepository()
+		comments.comments = []*models.CommentWithAuthor{
+			{
+				Comment: models.Comment{
+					ID:        commentID,
+					PostID:    postID,
+					UserID:    &authorID,
+					Content:   "Historical comment",
+					CreatedAt: time.Now(),
+				},
+				Author: &models.PublicUser{
+					ID:        authorID,
+					FirstName: "Amina",
+					LastName:  "Njeri",
+				},
+				ViewerVote: models.ViewerVoteNone,
+			},
+		}
+		service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository(), comments)
+
+		resp, err := service.GetCommentsByPost(context.Background(), postID.String(), viewerID, 10, 0)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(resp.Data) != 1 {
+			t.Fatalf("expected 1 comment, got %d", len(resp.Data))
 		}
 	})
 }
