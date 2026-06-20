@@ -34,18 +34,40 @@ func main() {
 	followerRepo := repositories.NewFollowerRepository(database)
 	postRepo := repositories.NewPostRepository(database)
 	groupMembershipRepo := repositories.NewGroupMembershipRepository(database)
+	groupRepo := repositories.NewGroupRepository(database)
+	eventRepo := repositories.NewEventRepository(database)
+	messageRepo := repositories.NewMessageRepository(database)
+	notificationRepo := repositories.NewNotificationRepository(database)
 
 	userService := services.NewUserService(userRepo, sessionRepo)
 	followerService := services.NewFollowerService(followerRepo, userRepo)
+	notificationService := services.NewNotificationService(notificationRepo, userRepo, groupRepo, eventRepo)
+	groupService := services.NewGroupService(groupRepo, groupMembershipRepo, userRepo, notificationService)
+	eventService := services.NewEventService(eventRepo, groupMembershipRepo, notificationService)
+	chatService := services.NewChatService(messageRepo, followerRepo, groupMembershipRepo, userRepo, groupRepo, notificationService)
 	postService := services.NewPostService(postRepo, userRepo, followerRepo, groupMembershipRepo)
 
 	userHandler := handlers.NewUserHandler(userService)
 	followerHandler := handlers.NewFollowerHandler(followerService, userService)
 	postHandler := handlers.NewPostHandler(postService)
+	groupHandler := handlers.NewGroupHandler(groupService)
+	eventHandler := handlers.NewEventHandler(eventService)
+	chatHandler := handlers.NewChatHandler(chatService)
+	notificationHandler := handlers.NewNotificationHandler(notificationService)
 	authMiddleware := middleware.Auth(userService)
 
 	// Register Routes
-	handler := routers.RegisterRoutes(userHandler, followerHandler, postHandler, authMiddleware, config.App.AllowedOrigin)
+	handler := routers.RegisterRoutes(
+		userHandler,
+		followerHandler,
+		postHandler,
+		groupHandler,
+		eventHandler,
+		chatHandler,
+		notificationHandler,
+		authMiddleware,
+		config.App.AllowedOrigin,
+	)
 
 	address := net.JoinHostPort(config.App.BaseAddress, config.App.Port)
 	log.Printf("Server starting on %s...", address)
