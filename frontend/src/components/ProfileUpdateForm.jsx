@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/useAuth";
-import "../styles/RegisterForm.css"; // Reusing styles for consistency
+import "../styles/profile.css";
 import { apiFetch } from "../utils/api";
 
 const getProfileFormData = (currentUser) => ({
@@ -15,7 +15,7 @@ const getProfileFormData = (currentUser) => ({
   is_public: currentUser.is_public || false,
 });
 
-const ProfileUpdateFields = ({ currentUser, refresh }) => {
+const ProfileUpdateFields = ({ currentUser, refresh, onClose }) => {
   const [formData, setFormData] = useState(() =>
     getProfileFormData(currentUser)
   );
@@ -69,12 +69,16 @@ const ProfileUpdateFields = ({ currentUser, refresh }) => {
   };
 
   return (
-    <div className="register-form-container">
-      <h2>Update Profile</h2>
-      {error && <div className="error-message">{error}</div>}
-      {success && <div className="success-message">{success}</div>}
-      <form onSubmit={handleSubmit} className="register-form">
-        <div className="form-group">
+    <div className="profile-edit-card">
+      <div className="profile-edit-card__header">
+        <h2>Update Profile</h2>
+      </div>
+
+      {error && <div className="profile-form-error">{error}</div>}
+      {success && <div className="profile-form-success">{success}</div>}
+
+      <form onSubmit={handleSubmit} className="profile-edit-form">
+        <div className="profile-form-group">
           <label htmlFor="email">Email</label>
           <input
             type="email"
@@ -85,8 +89,8 @@ const ProfileUpdateFields = ({ currentUser, refresh }) => {
           />
         </div>
 
-        <div className="form-row">
-          <div className="form-group">
+        <div className="profile-form-row">
+          <div className="profile-form-group">
             <label htmlFor="first_name">First Name</label>
             <input
               type="text"
@@ -96,7 +100,7 @@ const ProfileUpdateFields = ({ currentUser, refresh }) => {
               onChange={handleChange}
             />
           </div>
-          <div className="form-group">
+          <div className="profile-form-group">
             <label htmlFor="last_name">Last Name</label>
             <input
               type="text"
@@ -108,7 +112,7 @@ const ProfileUpdateFields = ({ currentUser, refresh }) => {
           </div>
         </div>
 
-        <div className="form-group">
+        <div className="profile-form-group">
           <label htmlFor="date_of_birth">Date of Birth</label>
           <input
             type="date"
@@ -119,7 +123,7 @@ const ProfileUpdateFields = ({ currentUser, refresh }) => {
           />
         </div>
 
-        <div className="form-group">
+        <div className="profile-form-group">
           <label htmlFor="nickname">Nickname</label>
           <input
             type="text"
@@ -130,7 +134,7 @@ const ProfileUpdateFields = ({ currentUser, refresh }) => {
           />
         </div>
 
-        <div className="form-group">
+        <div className="profile-form-group">
           <label htmlFor="about_me">About Me</label>
           <textarea
             id="about_me"
@@ -140,7 +144,7 @@ const ProfileUpdateFields = ({ currentUser, refresh }) => {
           />
         </div>
 
-        <div className="form-group checkbox-group">
+        <div className="profile-form-group profile-form-checkbox">
           <label>
             <input
               type="checkbox"
@@ -152,7 +156,7 @@ const ProfileUpdateFields = ({ currentUser, refresh }) => {
           </label>
         </div>
 
-        <div className="form-group">
+        <div className="profile-form-group">
           <label htmlFor="avatar">Avatar</label>
           <input
             type="file"
@@ -163,12 +167,12 @@ const ProfileUpdateFields = ({ currentUser, refresh }) => {
           />
         </div>
 
-        <hr />
-        <p className="form-hint">
+        <hr className="profile-form-divider" />
+        <p className="profile-form-hint">
           Fill these only if you want to change email or password
         </p>
 
-        <div className="form-group">
+        <div className="profile-form-group">
           <label htmlFor="current_password">
             Current Password (Required for sensitive changes)
           </label>
@@ -181,7 +185,7 @@ const ProfileUpdateFields = ({ currentUser, refresh }) => {
           />
         </div>
 
-        <div className="form-group">
+        <div className="profile-form-group">
           <label htmlFor="new_password">New Password</label>
           <input
             type="password"
@@ -192,15 +196,22 @@ const ProfileUpdateFields = ({ currentUser, refresh }) => {
           />
         </div>
 
-        <button type="submit" className="submit-btn">
-          Update Profile
-        </button>
+        <div className="profile-form-actions">
+          {onClose && (
+            <button type="button" className="profile-btn" onClick={onClose}>
+              Cancel
+            </button>
+          )}
+          <button type="submit" className="profile-btn profile-btn--primary">
+            Update Profile
+          </button>
+        </div>
       </form>
     </div>
   );
 };
 
-const ProfileUpdateForm = () => {
+const ProfileUpdateForm = ({ onClose }) => {
   const { currentUser, refresh } = useAuth();
 
   if (!currentUser) {
@@ -212,6 +223,7 @@ const ProfileUpdateForm = () => {
       key={currentUser.id || currentUser.email}
       currentUser={currentUser}
       refresh={refresh}
+      onClose={onClose}
     />
   );
 };
