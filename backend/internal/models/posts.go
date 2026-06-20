@@ -227,6 +227,23 @@ func MapPostResponse(row *PostWithAuthor) (PostResponse, error) {
 	}, nil
 }
 
+// UpdatePostRequest contains fields to edit an existing post.
+type UpdatePostRequest struct {
+	Content     *string
+	Privacy     *PostPrivacy
+	AudienceIDs []uuid.UUID
+	ImageURL    *string
+	RemoveImage bool
+}
+
+// CreateCommentRequest contains fields to write a new comment or reply.
+type CreateCommentRequest struct {
+	PostID          uuid.UUID
+	ParentCommentID *uuid.UUID
+	Content         string
+	ImageURL        *string
+}
+
 // Comment is the database representation of a post comment or nested reply.
 type Comment struct {
 	ID              uuid.UUID
