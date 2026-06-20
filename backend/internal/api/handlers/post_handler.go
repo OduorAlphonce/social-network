@@ -163,7 +163,7 @@ func (h *PostHandler) GetSinglePost(w http.ResponseWriter, r *http.Request) {
 	postID := r.PathValue("id")
 
 	if _, err := uuid.FromString(postID); err != nil {
-		h.sendError(w, http.StatusBadRequest, "shared_validation_error: malformed id")
+		_ = utils.SendError(w, http.StatusBadRequest, "shared_validation_error: malformed id", nil)
 		return
 	}
 
@@ -172,29 +172,26 @@ func (h *PostHandler) GetSinglePost(w http.ResponseWriter, r *http.Request) {
 	payload, err := h.postService.GetSinglePost(ctx, postID, viewerID)
 	if err != nil {
 		if errors.Is(err, services.ErrPostNotFound) {
-			h.sendError(w, http.StatusNotFound, "Post not found")
+			_ = utils.SendError(w, http.StatusNotFound, "Post not found", nil)
 			return
 		}
 		if errors.Is(err, services.ErrPostForbidden) {
-			h.sendError(w, http.StatusForbidden, "You do not have access to this post")
+			_ = utils.SendError(w, http.StatusForbidden, "You do not have access to this post", nil)
 			return
 		}
-		h.sendError(w, http.StatusInternalServerError, "Internal server error")
+		_ = utils.SendError(w, http.StatusInternalServerError, "Internal server error", nil)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(payload)
-}
-
-func (h *PostHandler) sendError(w http.ResponseWriter, status int, msg string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+	_ = utils.SendSuccess(w, http.StatusOK, "Post retrieved successfully", payload)
 }
 
 func (h *PostHandler) extractViewerIDFromContext(r *http.Request) *string {
-	return nil
+	currentUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		return nil
+	}
+	userIDStr := currentUser.ID.String()
+	return &userIDStr
 }
 
 // Feed returns the authenticated user's home feed or a group feed.
