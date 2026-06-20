@@ -41,6 +41,8 @@ type PostRepository interface {
 	ListHomeFeed(viewerID uuid.UUID, limit, offset int) ([]*models.PostWithAuthor, error)
 	ListProfilePosts(profileUserID, viewerID uuid.UUID, limit, offset int) ([]*models.PostWithAuthor, error)
 	ListGroupFeed(groupID, viewerID uuid.UUID, limit, offset int) ([]*models.PostWithAuthor, error)
+	UpdatePostWithAudience(post *models.Post, audience []uuid.UUID) error
+	DeletePost(id uuid.UUID) error
 }
 
 // CommentRepository stores comments and returns comment rows hydrated with viewer state.

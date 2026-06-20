@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
@@ -418,4 +419,55 @@ func maxInt(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func (r *sqlitePostRepository) UpdatePostWithAudience(post *models.Post, audience []uuid.UUID) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	query := `
+		UPDATE posts
+		SET content = ?, privacy = ?, image_url = ?, updated_at = ?
+		WHERE id = ?`
+	_, err = tx.Exec(
+		query,
+		post.Content,
+		post.Privacy,
+		nullableStringArg(post.ImageURL),
+		nullableTimeArg(post.UpdatedAt),
+		post.ID.String(),
+	)
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(`DELETE FROM post_audiences WHERE post_id = ?`, post.ID.String()); err != nil {
+		return err
+	}
+
+	for _, userID := range audience {
+		_, err = tx.Exec(
+			`INSERT INTO post_audiences (post_id, user_id) VALUES (?, ?)`,
+			post.ID.String(),
+			userID.String(),
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (r *sqlitePostRepository) DeletePost(id uuid.UUID) error {
+	now := time.Now()
+	_, err := r.db.Exec(
+		`UPDATE posts SET deleted_at = ?, content = '', image_url = NULL WHERE id = ?`,
+		now,
+		id.String(),
+	)
+	return err
 }
