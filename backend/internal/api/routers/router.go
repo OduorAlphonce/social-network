@@ -54,7 +54,13 @@ func RegisterRoutes(
 	mux.Handle("/api/followers/reject", authMiddleware(http.HandlerFunc(followerHandler.RejectFollow)))
 	mux.Handle("/api/followers/followers", authMiddleware(http.HandlerFunc(followerHandler.GetFollowers)))
 	mux.Handle("/api/followers/following", authMiddleware(http.HandlerFunc(followerHandler.GetFollowing)))
-	mux.Handle("/api/posts", authMiddleware(http.HandlerFunc(postHandler.Feed)))
+	mux.Handle("/api/posts", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			postHandler.CreatePost(w, r)
+		} else {
+			postHandler.Feed(w, r)
+		}
+	})))
 	mux.Handle("/api/users/{id}/posts", authMiddleware(http.HandlerFunc(postHandler.ProfilePosts)))
 
 	mux.Handle("/api/posts/{id}", authMiddleware(http.HandlerFunc(postHandler.GetSinglePost)))
