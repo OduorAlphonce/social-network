@@ -40,6 +40,7 @@ type PostService interface {
 	GetHomeFeed(viewerID uuid.UUID, limit, offset int) (*models.PostListResponse, error)
 	GetProfilePosts(profileUserID, viewerID uuid.UUID, limit, offset int) (*models.PostListResponse, error)
 	GetGroupFeed(groupID, viewerID uuid.UUID, limit, offset int) (*models.PostListResponse, error)
+	GetCommentsByPost(ctx context.Context, postID string, viewerID uuid.UUID, limit, offset int) (*models.CommentListResponse, error)
 }
 
 type postService struct {
@@ -47,6 +48,7 @@ type postService struct {
 	userRepo        repositories.UserRepository
 	followerRepo    repositories.FollowersRepository
 	groupMemberRepo repositories.GroupMembershipRepository
+	commentRepo     repositories.CommentRepository
 }
 
 // NewPostService creates a service for authenticated post reads.
@@ -55,12 +57,14 @@ func NewPostService(
 	userRepo repositories.UserRepository,
 	followerRepo repositories.FollowersRepository,
 	groupMemberRepo repositories.GroupMembershipRepository,
+	commentRepo repositories.CommentRepository,
 ) PostService {
 	return &postService{
 		postRepo:        postRepo,
 		userRepo:        userRepo,
 		followerRepo:    followerRepo,
 		groupMemberRepo: groupMemberRepo,
+		commentRepo:     commentRepo,
 	}
 }
 
@@ -168,6 +172,15 @@ func (s *postService) canViewPost(row *models.PostWithAuthor, viewerID uuid.UUID
 			return nil
 		}
 	case models.PostPrivacyPrivate:
+		if audRepo, ok := s.postRepo.(repositories.PostAudienceRepository); ok {
+			member, err := audRepo.IsPostAudienceMember(row.Post.ID, viewerID)
+			if err != nil {
+				return err
+			}
+			if member {
+				return nil
+			}
+		}
 		return ErrPostForbidden
 	}
 	return ErrPostForbidden
@@ -316,4 +329,63 @@ func (s *postService) CreatePost(ctx context.Context, req *models.CreatePostRequ
 	}
 
 	return models.MapPostResponse(row)
+}
+
+func (s *postService) GetCommentsByPost(ctx context.Context, postID string, viewerID uuid.UUID, limit, offset int) (*models.CommentListResponse, error) {
+	pID, err := uuid.FromString(postID)
+	if err != nil {
+		return nil, ErrPostNotFound
+	}
+
+	// 1. Fetch the post row (even soft-deleted post rows are returned by GetPostByID)
+	row, err := s.postRepo.GetPostByID(pID, viewerID)
+	if err != nil {
+		return nil, ErrPostNotFound
+	}
+
+	// 2. Enforce post viewer permission checks
+	if err := s.canViewPost(row, viewerID); err != nil {
+		return nil, err
+	}
+
+	// Bounded top-level pagination
+	if limit <= 0 {
+		limit = DefaultFeedLimit
+	}
+	if limit > MaxFeedLimit {
+		limit = MaxFeedLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	// 3. Query the flat list of comments with 1 extra root to determine hasMore
+	flatComments, err := s.commentRepo.ListCommentTreeByPost(pID, viewerID, limit+1, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. Map flat collection to recursively nested tree structure in Go
+	tree, err := models.MapCommentTree(flatComments)
+	if err != nil {
+		return nil, err
+	}
+
+	// Bounded pagination check
+	hasMore := len(tree) > limit
+	if hasMore {
+		tree = tree[:limit]
+	}
+
+	return &models.CommentListResponse{
+		Status:  "success",
+		Message: "Comments returned.",
+		Data:    tree,
+		Errors:  nil,
+		Pagination: models.Pagination{
+			Limit:   limit,
+			Offset:  offset,
+			HasMore: hasMore,
+		},
+	}, nil
 }
