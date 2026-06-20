@@ -64,6 +64,7 @@ func RegisterRoutes(
 	mux.Handle("/api/users/{id}/posts", authMiddleware(http.HandlerFunc(postHandler.ProfilePosts)))
 
 	mux.Handle("/api/posts/{id}", authMiddleware(http.HandlerFunc(postHandler.GetSinglePost)))
+	mux.Handle("/api/posts/{id}/comments", authMiddleware(http.HandlerFunc(postHandler.GetComments)))
 
 	// Groups routes
 	mux.Handle("/api/groups", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
