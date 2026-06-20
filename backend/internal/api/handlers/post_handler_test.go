@@ -264,5 +264,20 @@ func TestPostHandlerCreatePost(t *testing.T) {
 		if recorder.Code != http.StatusCreated {
 			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusCreated)
 		}
+
+		var respEnvelope map[string]any
+		if err := json.NewDecoder(recorder.Body).Decode(&respEnvelope); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if respEnvelope["status"] != "success" {
+			t.Fatalf("expected status success, got %v", respEnvelope["status"])
+		}
+		data, ok := respEnvelope["data"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected data object inside response, got %T", respEnvelope["data"])
+		}
+		if data["content"] != "hello" {
+			t.Fatalf("expected content 'hello', got %v", data["content"])
+		}
 	})
 }
