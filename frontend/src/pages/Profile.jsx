@@ -166,7 +166,7 @@ const Profile = () => {
     }, [userId]);
 
     return (
-      <div className="profile-posts">
+      <div className="post-container">
         {loading ? (
           <div className="profile-skeleton profile-skeleton--posts">
             {[1, 2, 3].map((i) => (
@@ -182,11 +182,11 @@ const Profile = () => {
             ) : (
               posts.map((post) => (
                 <div key={post.id} className="post-card">
-                  <div className="post-card__header">
+                  <div className="post-header">
                     <img 
                       src={user.avatar} 
                       alt={user.displayName}
-                      className="post-card__avatar"
+                      className="profile-photo"
                     />
                     <div className="post-card__meta">
                       <span className="post-card__name">{user.displayName}</span>
@@ -199,18 +199,20 @@ const Profile = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="post-card__content">{post.content}</div>
+                  <div className="post-body">{post.content}</div>
                   {post.images.length > 0 && (
-                    <div className="post-card__images">
+                    <div className="post-image">
                       {post.images.map((img, idx) => (
                         <img key={idx} src={img} alt={`Post image ${idx + 1}`} />
                       ))}
                     </div>
                   )}
-                  <div className="post-card__actions">
-                    <button>❤️ {post.likes}</button>
-                    <button>💬 {post.comments}</button>
-                    <button>🔁 {post.shares}</button>
+                  <div className="post-footer">
+                  <div className="reaction-container center">
+                    <button className="reaction-button"><span className="reaction-like">❤️</span> <span className="reaction-count">{post.likes}</span></button>
+                    <button className="reaction-button"><span className="reaction-dislike">💬</span> <span className="reaction-count">{post.comments}</span></button>
+                    <button className="reaction-button"><span className="reaction-">🔁</span> <span className="reaction-count">{post.shares}</span></button>
+                  </div>
                   </div>
                 </div>
               ))
