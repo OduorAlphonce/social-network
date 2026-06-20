@@ -48,6 +48,52 @@ func (r *sqlitePostRepository) CreatePost(post *models.Post) error {
 	return err
 }
 
+func (r *sqlitePostRepository) CreatePostWithAudience(post *models.Post, audience []uuid.UUID) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	query := `
+		INSERT INTO posts (
+			id, user_id, group_id, content, image_url, privacy,
+			comment_count, like_count, dislike_count, created_at, updated_at, deleted_at
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err = tx.Exec(
+		query,
+		post.ID.String(),
+		nullableUUIDArg(post.UserID),
+		nullableUUIDArg(post.GroupID),
+		post.Content,
+		nullableStringArg(post.ImageURL),
+		post.Privacy,
+		post.CommentCount,
+		post.LikeCount,
+		post.DislikeCount,
+		post.CreatedAt,
+		nullableTimeArg(post.UpdatedAt),
+		nullableTimeArg(post.DeletedAt),
+	)
+	if err != nil {
+		return err
+	}
+
+	for _, userID := range audience {
+		_, err = tx.Exec(
+			`INSERT INTO post_audiences (post_id, user_id) VALUES (?, ?)`,
+			post.ID.String(),
+			userID.String(),
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
 func (r *sqlitePostRepository) GetPostByID(id, viewerID uuid.UUID) (*models.PostWithAuthor, error) {
 	row := r.db.QueryRow(postSelectSQL(`p.id = ?`, ""), viewerID.String(), id.String())
 	post, err := scanPostWithAuthor(row)
