@@ -237,6 +237,10 @@ func (r *fakePostRepository) CreatePost(post *models.Post) error {
 	return nil
 }
 
+func (r *fakePostRepository) CreatePostWithAudience(post *models.Post, audience []uuid.UUID) error {
+	return nil
+}
+
 func (r *fakePostRepository) GetPostByID(id, viewerID uuid.UUID) (*models.PostWithAuthor, error) {
 	r.lastSingleID = id
 	r.lastSingleViewerID = viewerID
@@ -373,4 +377,99 @@ func makeSinglePostRow(t *testing.T, postID uuid.UUID, privacy models.PostPrivac
 		},
 		ViewerVote: models.ViewerVoteNone,
 	}
+}
+
+func TestPostServiceCreatePost(t *testing.T) {
+	authorID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	followerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000002"))
+	nonFollowerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000003"))
+	groupID := uuid.Must(uuid.FromString("30000000-0000-0000-0000-000000000001"))
+
+	t.Run("Create public post success", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, uuid.Nil, models.PostPrivacyPublic, &authorID)
+		service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+
+		req := &models.CreatePostRequest{
+			Content: "Hello world",
+			Privacy: models.PostPrivacyPublic,
+		}
+		resp, err := service.CreatePost(context.Background(), req, authorID)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		activePost, ok := resp.(*models.ActivePostResponse)
+		if !ok {
+			t.Fatalf("expected ActivePostResponse, got %T", resp)
+		}
+		if activePost.Content != "post" {
+			t.Fatalf("unexpected content: %s", activePost.Content)
+		}
+	})
+
+	t.Run("Create group post fails if not a member", func(t *testing.T) {
+		posts := newFakePostRepository()
+		groups := newFakeGroupMembershipRepository()
+		service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), groups)
+
+		req := &models.CreatePostRequest{
+			Content: "Hello group",
+			GroupID: &groupID,
+		}
+		_, err := service.CreatePost(context.Background(), req, authorID)
+		if !errors.Is(err, ErrForbidden) {
+			t.Fatalf("expected ErrForbidden, got %v", err)
+		}
+	})
+
+	t.Run("Create group post success if member", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, uuid.Nil, models.PostPrivacyPublic, &authorID)
+		groups := newFakeGroupMembershipRepository()
+		groups.accepted[groupMemberKey{groupID: groupID, userID: authorID}] = true
+		service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), groups)
+
+		req := &models.CreatePostRequest{
+			Content: "Hello group",
+			GroupID: &groupID,
+		}
+		_, err := service.CreatePost(context.Background(), req, authorID)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("Create private post fails if audience is not accepted follower", func(t *testing.T) {
+		posts := newFakePostRepository()
+		followers := newFakeFollowersRepository()
+		service := NewPostService(posts, newFakeUserRepository(), followers, newFakeGroupMembershipRepository())
+
+		req := &models.CreatePostRequest{
+			Content:     "Hello private",
+			Privacy:     models.PostPrivacyPrivate,
+			AudienceIDs: []uuid.UUID{nonFollowerID},
+		}
+		_, err := service.CreatePost(context.Background(), req, authorID)
+		if !errors.Is(err, ErrNotFollower) {
+			t.Fatalf("expected ErrNotFollower, got %v", err)
+		}
+	})
+
+	t.Run("Create private post success if audience is accepted follower", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, uuid.Nil, models.PostPrivacyPrivate, &authorID)
+		followers := newFakeFollowersRepository()
+		followers.status[followerKey{followerID: followerID, followeeID: authorID}] = models.Accepted
+		service := NewPostService(posts, newFakeUserRepository(), followers, newFakeGroupMembershipRepository())
+
+		req := &models.CreatePostRequest{
+			Content:     "Hello private",
+			Privacy:     models.PostPrivacyPrivate,
+			AudienceIDs: []uuid.UUID{followerID},
+		}
+		_, err := service.CreatePost(context.Background(), req, authorID)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
