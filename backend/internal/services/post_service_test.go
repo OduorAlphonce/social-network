@@ -288,6 +288,42 @@ func (r *fakeGroupMembershipRepository) IsAcceptedGroupMember(groupID, userID uu
 	return r.accepted[groupMemberKey{groupID: groupID, userID: userID}], nil
 }
 
+func (r *fakeGroupMembershipRepository) GetMembership(groupID, userID uuid.UUID) (string, error) {
+	if r.accepted[groupMemberKey{groupID: groupID, userID: userID}] {
+		return "accepted", nil
+	}
+	return "none", nil
+}
+
+func (r *fakeGroupMembershipRepository) AddMembership(groupID, userID uuid.UUID, status string) error {
+	if status == "accepted" {
+		r.accepted[groupMemberKey{groupID: groupID, userID: userID}] = true
+	}
+	return nil
+}
+
+func (r *fakeGroupMembershipRepository) UpdateMembershipStatus(groupID, userID uuid.UUID, status string) error {
+	if status == "accepted" {
+		r.accepted[groupMemberKey{groupID: groupID, userID: userID}] = true
+	} else {
+		r.accepted[groupMemberKey{groupID: groupID, userID: userID}] = false
+	}
+	return nil
+}
+
+func (r *fakeGroupMembershipRepository) RemoveMembership(groupID, userID uuid.UUID) error {
+	delete(r.accepted, groupMemberKey{groupID: groupID, userID: userID})
+	return nil
+}
+
+func (r *fakeGroupMembershipRepository) ListGroupMembers(groupID uuid.UUID) ([]*models.User, error) {
+	return nil, nil
+}
+
+func (r *fakeGroupMembershipRepository) ListPendingRequests(groupID uuid.UUID) ([]*models.User, error) {
+	return nil, nil
+}
+
 func makePostRows(t *testing.T, count int) []*models.PostWithAuthor {
 	t.Helper()
 	authorID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000009"))
