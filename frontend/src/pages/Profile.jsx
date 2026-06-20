@@ -181,41 +181,59 @@ const Profile = () => {
               </div>
             ) : (
               posts.map((post) => (
-                <div key={post.id} className="post-card">
-                  <div className="post-header">
-                    <img 
-                      src={user.avatar} 
-                      alt={user.displayName}
-                      className="profile-photo"
-                    />
-                    <div className="post-card__meta">
-                      <span className="post-card__name">{user.displayName}</span>
-                      <span className="post-card__username">@{user.username}</span>
-                      <span className="post-card__time">
-                        {new Date(post.createdAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="post-body">{post.content}</div>
-                  {post.images.length > 0 && (
-                    <div className="post-image">
-                      {post.images.map((img, idx) => (
-                        <img key={idx} src={img} alt={`Post image ${idx + 1}`} />
-                      ))}
-                    </div>
-                  )}
-                  <div className="post-footer">
-                  <div className="reaction-container center">
-                    <button className="reaction-button"><span className="reaction-like">❤️</span> <span className="reaction-count">{post.likes}</span></button>
-                    <button className="reaction-button"><span className="reaction-dislike">💬</span> <span className="reaction-count">{post.comments}</span></button>
-                    <button className="reaction-button"><span className="reaction-">🔁</span> <span className="reaction-count">{post.shares}</span></button>
-                  </div>
-                  </div>
-                </div>
-              ))
+  <div key={post.id} className="post-container">
+    {/* Post Header */}
+    <div className="post-header">
+      <img 
+        src={user.avatar} 
+        alt={user.displayName}
+        className="profile-photo"
+      />
+      <div className="post-bio">
+        <div className="top-bar">
+          <h5>{user.displayName}</h5>
+          <div className="visibility">
+            <span>@{user.username}</span>
+            <span>•</span>
+            <span>
+              {new Date(post.createdAt).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              })}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Post Body */}
+    <div className="post-body">
+      <p>{post.content}</p>
+      {post.images.length > 0 && (
+        <img 
+          src={post.images[0]} 
+          alt="Post image" 
+          className="post-image"
+        />
+      )}
+    </div>
+
+    {/* Post Footer */}
+    <div className="post-footer">
+        <div className="reaction-container">
+          <Like like={like} isActive={likePost} />
+          <Dislike dislike={dislike} isActive={dislikePost} />
+        </div>
+        <div>
+          <p className="links">Comment</p>
+        </div>
+        <div>
+          <p className="links">Share</p>
+        </div>
+    </div>
+  </div>
+))
             )}
           </>
         )}
