@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
@@ -26,10 +27,15 @@ var (
 	ErrPostNotFound = errors.New("post not found")
 	// ErrPostForbidden means the current user is not allowed to access a post.
 	ErrPostForbidden = errors.New("access to this post is forbidden")
+	// ErrNotFollower means a selected private post audience is not an accepted follower.
+	ErrNotFollower = errors.New("all audience members must be accepted followers")
+	// ErrInvalidPrivacy means the privacy value is invalid.
+	ErrInvalidPrivacy = errors.New("invalid privacy value")
 )
 
 // PostService reads timeline, profile, group, and single-post views.
 type PostService interface {
+	CreatePost(ctx context.Context, req *models.CreatePostRequest, authorID uuid.UUID) (models.PostResponse, error)
 	GetSinglePost(ctx context.Context, postID string, viewerID *string) (models.PostResponse, error)
 	GetHomeFeed(viewerID uuid.UUID, limit, offset int) (*models.PostListResponse, error)
 	GetProfilePosts(profileUserID, viewerID uuid.UUID, limit, offset int) (*models.PostListResponse, error)
@@ -244,4 +250,70 @@ func parseOptionalViewerID(viewerID *string) (uuid.UUID, bool) {
 		return uuid.Nil, false
 	}
 	return id, true
+}
+
+func (s *postService) CreatePost(ctx context.Context, req *models.CreatePostRequest, authorID uuid.UUID) (models.PostResponse, error) {
+	// 1. Enforce validation for group posts vs profile posts
+	if req.GroupID != nil {
+		// require accepted membership
+		accepted, err := s.groupMemberRepo.IsAcceptedGroupMember(*req.GroupID, authorID)
+		if err != nil {
+			return nil, err
+		}
+		if !accepted {
+			return nil, ErrForbidden
+		}
+		// ignore ordinary audience selection
+		req.AudienceIDs = nil
+		// enforce group-only visibility
+		req.Privacy = models.PostPrivacyPublic
+	} else {
+		// validate privacy value
+		if req.Privacy != models.PostPrivacyPublic &&
+			req.Privacy != models.PostPrivacyAlmostPrivate &&
+			req.Privacy != models.PostPrivacyPrivate {
+			return nil, ErrInvalidPrivacy
+		}
+
+		// require each audience user to be an accepted follower for private posts
+		if req.Privacy == models.PostPrivacyPrivate {
+			for _, userID := range req.AudienceIDs {
+				status, err := s.followerRepo.GetStatus(userID, authorID)
+				if err != nil {
+					return nil, err
+				}
+				if status != models.Accepted {
+					return nil, ErrNotFollower
+				}
+			}
+		} else {
+			// ignore audience selection for non-private posts
+			req.AudienceIDs = nil
+		}
+	}
+
+	post := &models.Post{
+		ID:           uuid.Must(uuid.NewV4()),
+		UserID:       &authorID,
+		GroupID:      req.GroupID,
+		Content:      req.Content,
+		ImageURL:     req.ImageURL,
+		Privacy:      req.Privacy,
+		CommentCount: 0,
+		LikeCount:    0,
+		DislikeCount: 0,
+		CreatedAt:    time.Now().UTC(),
+	}
+
+	err := s.postRepo.CreatePostWithAudience(post, req.AudienceIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	row, err := s.postRepo.GetPostByID(post.ID, authorID)
+	if err != nil {
+		return nil, err
+	}
+
+	return models.MapPostResponse(row)
 }
