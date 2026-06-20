@@ -113,6 +113,15 @@ type VoteSummary struct {
 	ViewerVote   ViewerVote `json:"viewer_vote"`
 }
 
+// CreatePostRequest is the request payload for creating a post.
+type CreatePostRequest struct {
+	Content     string
+	Privacy     PostPrivacy
+	GroupID     *uuid.UUID
+	AudienceIDs []uuid.UUID
+	ImageURL    *string
+}
+
 // PostQuery filters reusable post-list repository reads.
 type PostQuery struct {
 	AuthorID *uuid.UUID
@@ -133,6 +142,15 @@ type PostListResponse struct {
 	Status     string            `json:"status"`
 	Message    string            `json:"message"`
 	Data       []PostResponse    `json:"data"`
+	Errors     map[string]string `json:"errors"`
+	Pagination Pagination        `json:"pagination"`
+}
+
+// CommentListResponse is the OpenAPI response envelope for nested comments trees.
+type CommentListResponse struct {
+	Status     string            `json:"status"`
+	Message    string            `json:"message"`
+	Data       []CommentResponse `json:"data"`
 	Errors     map[string]string `json:"errors"`
 	Pagination Pagination        `json:"pagination"`
 }
@@ -207,6 +225,23 @@ func MapPostResponse(row *PostWithAuthor) (PostResponse, error) {
 		CreatedAt:    row.Post.CreatedAt,
 		UpdatedAt:    row.Post.UpdatedAt,
 	}, nil
+}
+
+// UpdatePostRequest contains fields to edit an existing post.
+type UpdatePostRequest struct {
+	Content     *string
+	Privacy     *PostPrivacy
+	AudienceIDs []uuid.UUID
+	ImageURL    *string
+	RemoveImage bool
+}
+
+// CreateCommentRequest contains fields to write a new comment or reply.
+type CreateCommentRequest struct {
+	PostID          uuid.UUID
+	ParentCommentID *uuid.UUID
+	Content         string
+	ImageURL        *string
 }
 
 // Comment is the database representation of a post comment or nested reply.

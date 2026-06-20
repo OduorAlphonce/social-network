@@ -38,6 +38,7 @@ func main() {
 	eventRepo := repositories.NewEventRepository(database)
 	messageRepo := repositories.NewMessageRepository(database)
 	notificationRepo := repositories.NewNotificationRepository(database)
+	commentRepo := repositories.NewCommentRepository(database)
 
 	userService := services.NewUserService(userRepo, sessionRepo)
 	followerService := services.NewFollowerService(followerRepo, userRepo)
@@ -45,7 +46,7 @@ func main() {
 	groupService := services.NewGroupService(groupRepo, groupMembershipRepo, userRepo, notificationService)
 	eventService := services.NewEventService(eventRepo, groupMembershipRepo, notificationService)
 	chatService := services.NewChatService(messageRepo, followerRepo, groupMembershipRepo, userRepo, groupRepo, notificationService)
-	postService := services.NewPostService(postRepo, userRepo, followerRepo, groupMembershipRepo)
+	postService := services.NewPostService(postRepo, userRepo, followerRepo, groupMembershipRepo, commentRepo)
 
 	userHandler := handlers.NewUserHandler(userService)
 	followerHandler := handlers.NewFollowerHandler(followerService, userService)

@@ -19,13 +19,19 @@ func NewCommentRepository(db *sql.DB) CommentRepository {
 }
 
 func (r *sqliteCommentRepository) CreateComment(comment *models.Comment) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
 	query := `
 		INSERT INTO comments (
 			id, post_id, user_id, parent_comment_id, content, image_url,
 			like_count, dislike_count, created_at, deleted_at, updated_at
 		)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := r.db.Exec(
+	_, err = tx.Exec(
 		query,
 		comment.ID.String(),
 		comment.PostID.String(),
@@ -39,7 +45,19 @@ func (r *sqliteCommentRepository) CreateComment(comment *models.Comment) error {
 		nullableTimeArg(comment.DeletedAt),
 		nullableTimeArg(comment.UpdatedAt),
 	)
-	return err
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(
+		`UPDATE posts SET comment_count = comment_count + 1 WHERE id = ?`,
+		comment.PostID.String(),
+	)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *sqliteCommentRepository) GetCommentByID(id, viewerID uuid.UUID) (*models.CommentWithAuthor, error) {

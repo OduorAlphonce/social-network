@@ -35,11 +35,14 @@ type FollowersRepository interface {
 // PostRepository stores posts and returns post rows hydrated with viewer state.
 type PostRepository interface {
 	CreatePost(post *models.Post) error
+	CreatePostWithAudience(post *models.Post, audience []uuid.UUID) error
 	GetPostByID(id, viewerID uuid.UUID) (*models.PostWithAuthor, error)
 	ListPosts(query models.PostQuery, viewerID uuid.UUID) ([]*models.PostWithAuthor, error)
 	ListHomeFeed(viewerID uuid.UUID, limit, offset int) ([]*models.PostWithAuthor, error)
 	ListProfilePosts(profileUserID, viewerID uuid.UUID, limit, offset int) ([]*models.PostWithAuthor, error)
 	ListGroupFeed(groupID, viewerID uuid.UUID, limit, offset int) ([]*models.PostWithAuthor, error)
+	UpdatePostWithAudience(post *models.Post, audience []uuid.UUID) error
+	DeletePost(id uuid.UUID) error
 }
 
 // CommentRepository stores comments and returns comment rows hydrated with viewer state.
