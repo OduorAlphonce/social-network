@@ -101,14 +101,16 @@ func authenticatedRequest(method, target string, userID uuid.UUID) *http.Request
 }
 
 type fakePostService struct {
-	homeResponse    *models.PostListResponse
-	profileResponse *models.PostListResponse
-	groupResponse   *models.PostListResponse
-	createResponse  models.PostResponse
-	homeErr         error
-	profileErr      error
-	groupErr        error
-	createErr       error
+	homeResponse     *models.PostListResponse
+	profileResponse  *models.PostListResponse
+	groupResponse    *models.PostListResponse
+	createResponse   models.PostResponse
+	commentsResponse *models.CommentListResponse
+	homeErr          error
+	profileErr       error
+	groupErr         error
+	createErr        error
+	commentsErr      error
 }
 
 func (s *fakePostService) CreatePost(ctx context.Context, req *models.CreatePostRequest, authorID uuid.UUID) (models.PostResponse, error) {
@@ -120,6 +122,13 @@ func (s *fakePostService) CreatePost(ctx context.Context, req *models.CreatePost
 
 func (s *fakePostService) GetSinglePost(ctx context.Context, postID string, viewerID *string) (models.PostResponse, error) {
 	return nil, nil
+}
+
+func (s *fakePostService) GetCommentsByPost(ctx context.Context, postID string, viewerID uuid.UUID, limit, offset int) (*models.CommentListResponse, error) {
+	if s.commentsErr != nil {
+		return nil, s.commentsErr
+	}
+	return s.commentsResponse, nil
 }
 
 func (s *fakePostService) GetHomeFeed(viewerID uuid.UUID, limit, offset int) (*models.PostListResponse, error) {
@@ -278,6 +287,130 @@ func TestPostHandlerCreatePost(t *testing.T) {
 		}
 		if data["content"] != "hello" {
 			t.Fatalf("expected content 'hello', got %v", data["content"])
+		}
+	})
+}
+
+func TestPostHandlerGetComments(t *testing.T) {
+	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	postID := uuid.Must(uuid.FromString("bbbbbbbb-0000-0000-0000-000000000001"))
+
+	t.Run("GetComments success", func(t *testing.T) {
+		commentResponse := &models.CommentListResponse{
+			Status:  "success",
+			Message: "Comments returned.",
+			Data: []models.CommentResponse{
+				&models.ActiveCommentResponse{
+					ID:              uuid.Must(uuid.NewV4()),
+					Deleted:         false,
+					PostID:          postID,
+					ParentCommentID: nil,
+					Author: models.PublicUserResponse{
+						ID:        viewerID,
+						FirstName: "John",
+						LastName:  "Doe",
+					},
+					Content:      "Nice post!",
+					LikeCount:    0,
+					DislikeCount: 0,
+					ViewerVote:   models.ViewerVoteNone,
+					CreatedAt:    time.Now(),
+					Replies:      []models.CommentResponse{},
+				},
+			},
+			Pagination: models.Pagination{
+				Limit:   10,
+				Offset:  0,
+				HasMore: false,
+			},
+		}
+
+		service := &fakePostService{
+			commentsResponse: commentResponse,
+		}
+		handler := NewPostHandler(service)
+
+		request := authenticatedRequest(http.MethodGet, "/api/posts/"+postID.String()+"/comments", viewerID)
+		request.SetPathValue("id", postID.String())
+		recorder := httptest.NewRecorder()
+
+		handler.GetComments(recorder, request)
+
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
+		}
+
+		var respEnvelope map[string]any
+		if err := json.NewDecoder(recorder.Body).Decode(&respEnvelope); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if respEnvelope["status"] != "success" {
+			t.Fatalf("expected status success, got %v", respEnvelope["status"])
+		}
+		data, ok := respEnvelope["data"].([]any)
+		if !ok {
+			t.Fatalf("expected data to be an array, got %T", respEnvelope["data"])
+		}
+		if len(data) != 1 {
+			t.Fatalf("expected 1 comment, got %d", len(data))
+		}
+	})
+
+	t.Run("GetComments rejects invalid post ID", func(t *testing.T) {
+		handler := NewPostHandler(&fakePostService{})
+		request := authenticatedRequest(http.MethodGet, "/api/posts/not-a-uuid/comments", viewerID)
+		request.SetPathValue("id", "not-a-uuid")
+		recorder := httptest.NewRecorder()
+
+		handler.GetComments(recorder, request)
+
+		if recorder.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("GetComments rejects invalid pagination parameter", func(t *testing.T) {
+		handler := NewPostHandler(&fakePostService{})
+		request := authenticatedRequest(http.MethodGet, "/api/posts/"+postID.String()+"/comments?limit=invalid", viewerID)
+		request.SetPathValue("id", postID.String())
+		recorder := httptest.NewRecorder()
+
+		handler.GetComments(recorder, request)
+
+		if recorder.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("GetComments post not found returns 404", func(t *testing.T) {
+		service := &fakePostService{
+			commentsErr: services.ErrPostNotFound,
+		}
+		handler := NewPostHandler(service)
+		request := authenticatedRequest(http.MethodGet, "/api/posts/"+postID.String()+"/comments", viewerID)
+		request.SetPathValue("id", postID.String())
+		recorder := httptest.NewRecorder()
+
+		handler.GetComments(recorder, request)
+
+		if recorder.Code != http.StatusNotFound {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusNotFound)
+		}
+	})
+
+	t.Run("GetComments post forbidden returns 403", func(t *testing.T) {
+		service := &fakePostService{
+			commentsErr: services.ErrPostForbidden,
+		}
+		handler := NewPostHandler(service)
+		request := authenticatedRequest(http.MethodGet, "/api/posts/"+postID.String()+"/comments", viewerID)
+		request.SetPathValue("id", postID.String())
+		recorder := httptest.NewRecorder()
+
+		handler.GetComments(recorder, request)
+
+		if recorder.Code != http.StatusForbidden {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusForbidden)
 		}
 	})
 }
