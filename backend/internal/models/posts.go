@@ -146,6 +146,15 @@ type PostListResponse struct {
 	Pagination Pagination        `json:"pagination"`
 }
 
+// CommentListResponse is the OpenAPI response envelope for nested comments trees.
+type CommentListResponse struct {
+	Status     string            `json:"status"`
+	Message    string            `json:"message"`
+	Data       []CommentResponse `json:"data"`
+	Errors     map[string]string `json:"errors"`
+	Pagination Pagination        `json:"pagination"`
+}
+
 // PostWithAuthor is a repository read model with hydrated author and viewer state.
 type PostWithAuthor struct {
 	Post       Post
