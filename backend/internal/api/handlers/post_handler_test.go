@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -102,9 +104,18 @@ type fakePostService struct {
 	homeResponse    *models.PostListResponse
 	profileResponse *models.PostListResponse
 	groupResponse   *models.PostListResponse
+	createResponse  models.PostResponse
 	homeErr         error
 	profileErr      error
 	groupErr        error
+	createErr       error
+}
+
+func (s *fakePostService) CreatePost(ctx context.Context, req *models.CreatePostRequest, authorID uuid.UUID) (models.PostResponse, error) {
+	if s.createErr != nil {
+		return nil, s.createErr
+	}
+	return s.createResponse, nil
 }
 
 func (s *fakePostService) GetSinglePost(ctx context.Context, postID string, viewerID *string) (models.PostResponse, error) {
@@ -167,3 +178,91 @@ func samplePostListResponse(t *testing.T, limit, offset int, hasMore bool) *mode
 }
 
 var _ services.PostService = (*fakePostService)(nil)
+
+func TestPostHandlerCreatePost(t *testing.T) {
+	authorID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+
+	t.Run("Create post with invalid privacy rejected", func(t *testing.T) {
+		handler := NewPostHandler(&fakePostService{})
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		_ = writer.WriteField("content", "hello")
+		_ = writer.WriteField("privacy", "invalid-privacy")
+		_ = writer.Close()
+
+		request := httptest.NewRequest(http.MethodPost, "/api/posts", &body)
+		request.Header.Set("Content-Type", writer.FormDataContentType())
+		user := &models.User{ID: authorID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+
+		recorder := httptest.NewRecorder()
+		handler.CreatePost(recorder, request)
+
+		if recorder.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("Create post with empty content and no image rejected", func(t *testing.T) {
+		handler := NewPostHandler(&fakePostService{})
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		_ = writer.WriteField("content", "   ")
+		_ = writer.Close()
+
+		request := httptest.NewRequest(http.MethodPost, "/api/posts", &body)
+		request.Header.Set("Content-Type", writer.FormDataContentType())
+		user := &models.User{ID: authorID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+
+		recorder := httptest.NewRecorder()
+		handler.CreatePost(recorder, request)
+
+		if recorder.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("Create post success", func(t *testing.T) {
+		postResponse, err := models.MapPostResponse(&models.PostWithAuthor{
+			Post: models.Post{
+				ID:        uuid.Must(uuid.NewV4()),
+				UserID:    &authorID,
+				Content:   "hello",
+				Privacy:   models.PostPrivacyPublic,
+				CreatedAt: time.Now(),
+			},
+			Author: &models.PublicUser{
+				ID:        authorID,
+				FirstName: "Amina",
+				LastName:  "Njeri",
+			},
+		})
+		if err != nil {
+			t.Fatalf("failed to map post: %v", err)
+		}
+
+		service := &fakePostService{
+			createResponse: postResponse,
+		}
+		handler := NewPostHandler(service)
+
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		_ = writer.WriteField("content", "hello")
+		_ = writer.WriteField("privacy", "public")
+		_ = writer.Close()
+
+		request := httptest.NewRequest(http.MethodPost, "/api/posts", &body)
+		request.Header.Set("Content-Type", writer.FormDataContentType())
+		user := &models.User{ID: authorID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+
+		recorder := httptest.NewRecorder()
+		handler.CreatePost(recorder, request)
+
+		if recorder.Code != http.StatusCreated {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusCreated)
+		}
+	})
+}
