@@ -17,6 +17,10 @@ func RegisterRoutes(
 	userHandler *handlers.UserHandler,
 	followerHandler *handlers.FollowerHandler,
 	postHandler *handlers.PostHandler,
+	groupHandler *handlers.GroupHandler,
+	eventHandler *handlers.EventHandler,
+	chatHandler *handlers.ChatHandler,
+	notificationHandler *handlers.NotificationHandler,
 	authMiddleware func(http.Handler) http.Handler,
 	allowedOrigin string,
 ) http.Handler {
@@ -55,5 +59,46 @@ func RegisterRoutes(
 
 	mux.Handle("/api/posts/{id}", authMiddleware(http.HandlerFunc(postHandler.GetSinglePost)))
 
+	// Groups routes
+	mux.Handle("/api/groups", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			groupHandler.CreateGroup(w, r)
+		} else {
+			groupHandler.ListGroups(w, r)
+		}
+	})))
+	mux.Handle("/api/groups/{id}/join", authMiddleware(http.HandlerFunc(groupHandler.RequestJoin)))
+	mux.Handle("/api/groups/{id}/invite", authMiddleware(http.HandlerFunc(groupHandler.InviteUser)))
+	mux.Handle("/api/groups/{id}/respond", authMiddleware(http.HandlerFunc(groupHandler.RespondMembership)))
+	mux.Handle("/api/groups/{id}/members", authMiddleware(http.HandlerFunc(groupHandler.ListMembers)))
+	mux.Handle("/api/groups/{id}/requests", authMiddleware(http.HandlerFunc(groupHandler.ListPendingRequests)))
+
+	// Events routes
+	mux.Handle("/api/groups/{id}/events", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			eventHandler.CreateEvent(w, r)
+		} else {
+			eventHandler.ListEvents(w, r)
+		}
+	})))
+	mux.Handle("/api/events/{id}/rsvp", authMiddleware(http.HandlerFunc(eventHandler.RespondEvent)))
+
+	// Chat/Messages routes
+	mux.Handle("/api/conversations", authMiddleware(http.HandlerFunc(chatHandler.GetConversations)))
+	mux.Handle("/api/messages", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			chatHandler.SendMessage(w, r)
+		} else {
+			chatHandler.GetMessages(w, r)
+		}
+	})))
+	mux.Handle("/api/ws", authMiddleware(http.HandlerFunc(chatHandler.HandleWS)))
+
+	// Notifications routes
+	mux.Handle("/api/notifications", authMiddleware(http.HandlerFunc(notificationHandler.ListNotifications)))
+	mux.Handle("/api/notifications/{id}/read", authMiddleware(http.HandlerFunc(notificationHandler.MarkAsRead)))
+	mux.Handle("/api/notifications/read/all", authMiddleware(http.HandlerFunc(notificationHandler.MarkAllAsRead)))
+
 	return middleware.CorsMiddleware(mux)
 }
+
