@@ -101,16 +101,22 @@ func authenticatedRequest(method, target string, userID uuid.UUID) *http.Request
 }
 
 type fakePostService struct {
-	homeResponse     *models.PostListResponse
-	profileResponse  *models.PostListResponse
-	groupResponse    *models.PostListResponse
-	createResponse   models.PostResponse
-	commentsResponse *models.CommentListResponse
-	homeErr          error
-	profileErr       error
-	groupErr         error
-	createErr        error
-	commentsErr      error
+	homeResponse          *models.PostListResponse
+	profileResponse       *models.PostListResponse
+	groupResponse         *models.PostListResponse
+	createResponse        models.PostResponse
+	commentsResponse      *models.CommentListResponse
+	createCommentResponse models.CommentResponse
+	updateResponse        models.PostResponse
+	deleteResponse        models.PostResponse
+	homeErr               error
+	profileErr            error
+	groupErr              error
+	createErr             error
+	commentsErr           error
+	createCommentErr      error
+	updateErr             error
+	deleteErr             error
 }
 
 func (s *fakePostService) CreatePost(ctx context.Context, req *models.CreatePostRequest, authorID uuid.UUID) (models.PostResponse, error) {
@@ -129,6 +135,27 @@ func (s *fakePostService) GetCommentsByPost(ctx context.Context, postID string, 
 		return nil, s.commentsErr
 	}
 	return s.commentsResponse, nil
+}
+
+func (s *fakePostService) CreateComment(ctx context.Context, req *models.CreateCommentRequest, authorID uuid.UUID) (models.CommentResponse, error) {
+	if s.createCommentErr != nil {
+		return nil, s.createCommentErr
+	}
+	return s.createCommentResponse, nil
+}
+
+func (s *fakePostService) UpdatePost(ctx context.Context, postID string, req *models.UpdatePostRequest, authorID uuid.UUID) (models.PostResponse, error) {
+	if s.updateErr != nil {
+		return nil, s.updateErr
+	}
+	return s.updateResponse, nil
+}
+
+func (s *fakePostService) DeletePost(ctx context.Context, postID string, authorID uuid.UUID) (models.PostResponse, error) {
+	if s.deleteErr != nil {
+		return nil, s.deleteErr
+	}
+	return s.deleteResponse, nil
 }
 
 func (s *fakePostService) GetHomeFeed(viewerID uuid.UUID, limit, offset int) (*models.PostListResponse, error) {
@@ -408,6 +435,287 @@ func TestPostHandlerGetComments(t *testing.T) {
 		recorder := httptest.NewRecorder()
 
 		handler.GetComments(recorder, request)
+
+		if recorder.Code != http.StatusForbidden {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusForbidden)
+		}
+	})
+}
+
+func TestPostHandlerCreateComment(t *testing.T) {
+	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	postID := uuid.Must(uuid.FromString("bbbbbbbb-0000-0000-0000-000000000001"))
+	commentID := uuid.Must(uuid.FromString("11111111-0000-0000-0000-000000000001"))
+
+	t.Run("CreateComment success", func(t *testing.T) {
+		commentResponse, _ := models.MapCommentResponse(&models.CommentWithAuthor{
+			Comment: models.Comment{
+				ID:        commentID,
+				PostID:    postID,
+				UserID:    &viewerID,
+				Content:   "Looks great!",
+				CreatedAt: time.Now(),
+			},
+			Author: &models.PublicUser{
+				ID:        viewerID,
+				FirstName: "John",
+				LastName:  "Doe",
+			},
+			ViewerVote: models.ViewerVoteNone,
+		}, []models.CommentResponse{})
+
+		service := &fakePostService{
+			createCommentResponse: commentResponse,
+		}
+		handler := NewPostHandler(service)
+
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		_ = writer.WriteField("content", "Looks great!")
+		_ = writer.Close()
+
+		request := httptest.NewRequest(http.MethodPost, "/api/posts/"+postID.String()+"/comments", &body)
+		request.Header.Set("Content-Type", writer.FormDataContentType())
+		user := &models.User{ID: viewerID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+		request.SetPathValue("id", postID.String())
+
+		recorder := httptest.NewRecorder()
+		handler.CreateComment(recorder, request)
+
+		if recorder.Code != http.StatusCreated {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusCreated)
+		}
+
+		var respEnvelope map[string]any
+		if err := json.NewDecoder(recorder.Body).Decode(&respEnvelope); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if respEnvelope["status"] != "success" {
+			t.Fatalf("expected status success, got %v", respEnvelope["status"])
+		}
+		data, ok := respEnvelope["data"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected data object, got %T", respEnvelope["data"])
+		}
+		if data["content"] != "Looks great!" {
+			t.Fatalf("expected content 'Looks great!', got %v", data["content"])
+		}
+	})
+
+	t.Run("CreateComment rejects empty content and no image", func(t *testing.T) {
+		handler := NewPostHandler(&fakePostService{})
+
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		_ = writer.WriteField("content", "   ")
+		_ = writer.Close()
+
+		request := httptest.NewRequest(http.MethodPost, "/api/posts/"+postID.String()+"/comments", &body)
+		request.Header.Set("Content-Type", writer.FormDataContentType())
+		user := &models.User{ID: viewerID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+		request.SetPathValue("id", postID.String())
+
+		recorder := httptest.NewRecorder()
+		handler.CreateComment(recorder, request)
+
+		if recorder.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("CreateComment post or parent deleted returns 409", func(t *testing.T) {
+		service := &fakePostService{
+			createCommentErr: services.ErrPostOrCommentDeleted,
+		}
+		handler := NewPostHandler(service)
+
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		_ = writer.WriteField("content", "looks great!")
+		_ = writer.Close()
+
+		request := httptest.NewRequest(http.MethodPost, "/api/posts/"+postID.String()+"/comments", &body)
+		request.Header.Set("Content-Type", writer.FormDataContentType())
+		user := &models.User{ID: viewerID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+		request.SetPathValue("id", postID.String())
+
+		recorder := httptest.NewRecorder()
+		handler.CreateComment(recorder, request)
+
+		if recorder.Code != http.StatusConflict {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusConflict)
+		}
+	})
+
+	t.Run("CreateComment cross-post parent returns 400", func(t *testing.T) {
+		service := &fakePostService{
+			createCommentErr: services.ErrCrossPostParent,
+		}
+		handler := NewPostHandler(service)
+
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		_ = writer.WriteField("content", "looks great!")
+		_ = writer.WriteField("parent_comment_id", commentID.String())
+		_ = writer.Close()
+
+		request := httptest.NewRequest(http.MethodPost, "/api/posts/"+postID.String()+"/comments", &body)
+		request.Header.Set("Content-Type", writer.FormDataContentType())
+		user := &models.User{ID: viewerID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+		request.SetPathValue("id", postID.String())
+
+		recorder := httptest.NewRecorder()
+		handler.CreateComment(recorder, request)
+
+		if recorder.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusBadRequest)
+		}
+	})
+}
+
+func TestPostHandlerUpdatePost(t *testing.T) {
+	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	postID := uuid.Must(uuid.FromString("bbbbbbbb-0000-0000-0000-000000000001"))
+
+	t.Run("UpdatePost success", func(t *testing.T) {
+		postResponse, _ := models.MapPostResponse(&models.PostWithAuthor{
+			Post: models.Post{
+				ID:      postID,
+				UserID:  &viewerID,
+				Content: "Updated Content",
+				Privacy: models.PostPrivacyPublic,
+			},
+			Author: &models.PublicUser{
+				ID:        viewerID,
+				FirstName: "John",
+				LastName:  "Doe",
+			},
+			ViewerVote: models.ViewerVoteNone,
+		})
+
+		service := &fakePostService{
+			updateResponse: postResponse,
+		}
+		handler := NewPostHandler(service)
+
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		_ = writer.WriteField("content", "Updated Content")
+		_ = writer.Close()
+
+		request := httptest.NewRequest(http.MethodPatch, "/api/posts/"+postID.String(), &body)
+		request.Header.Set("Content-Type", writer.FormDataContentType())
+		user := &models.User{ID: viewerID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+		request.SetPathValue("id", postID.String())
+
+		recorder := httptest.NewRecorder()
+		handler.UpdatePost(recorder, request)
+
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
+		}
+
+		var respEnvelope map[string]any
+		if err := json.NewDecoder(recorder.Body).Decode(&respEnvelope); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if respEnvelope["status"] != "success" {
+			t.Fatalf("expected status success, got %v", respEnvelope["status"])
+		}
+		data, ok := respEnvelope["data"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected data object, got %T", respEnvelope["data"])
+		}
+		if data["content"] != "Updated Content" {
+			t.Fatalf("expected content 'Updated Content', got %v", data["content"])
+		}
+	})
+
+	t.Run("UpdatePost forbidden returns 403", func(t *testing.T) {
+		service := &fakePostService{
+			updateErr: services.ErrForbidden,
+		}
+		handler := NewPostHandler(service)
+
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		_ = writer.WriteField("content", "Updated Content")
+		_ = writer.Close()
+
+		request := httptest.NewRequest(http.MethodPatch, "/api/posts/"+postID.String(), &body)
+		request.Header.Set("Content-Type", writer.FormDataContentType())
+		user := &models.User{ID: viewerID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+		request.SetPathValue("id", postID.String())
+
+		recorder := httptest.NewRecorder()
+		handler.UpdatePost(recorder, request)
+
+		if recorder.Code != http.StatusForbidden {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusForbidden)
+		}
+	})
+}
+
+func TestPostHandlerDeletePost(t *testing.T) {
+	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	postID := uuid.Must(uuid.FromString("bbbbbbbb-0000-0000-0000-000000000001"))
+
+	t.Run("DeletePost success", func(t *testing.T) {
+		service := &fakePostService{
+			deleteResponse: &models.DeletedPostResponse{
+				ID:      postID,
+				Deleted: true,
+			},
+		}
+		handler := NewPostHandler(service)
+
+		request := httptest.NewRequest(http.MethodDelete, "/api/posts/"+postID.String(), nil)
+		user := &models.User{ID: viewerID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+		request.SetPathValue("id", postID.String())
+
+		recorder := httptest.NewRecorder()
+		handler.DeletePost(recorder, request)
+
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
+		}
+
+		var respEnvelope map[string]any
+		if err := json.NewDecoder(recorder.Body).Decode(&respEnvelope); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if respEnvelope["status"] != "success" {
+			t.Fatalf("expected status success, got %v", respEnvelope["status"])
+		}
+		data, ok := respEnvelope["data"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected data object, got %T", respEnvelope["data"])
+		}
+		if data["deleted"] != true {
+			t.Fatalf("expected deleted true, got %v", data["deleted"])
+		}
+	})
+
+	t.Run("DeletePost forbidden returns 403", func(t *testing.T) {
+		service := &fakePostService{
+			deleteErr: services.ErrForbidden,
+		}
+		handler := NewPostHandler(service)
+
+		request := httptest.NewRequest(http.MethodDelete, "/api/posts/"+postID.String(), nil)
+		user := &models.User{ID: viewerID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+		request.SetPathValue("id", postID.String())
+
+		recorder := httptest.NewRecorder()
+		handler.DeletePost(recorder, request)
 
 		if recorder.Code != http.StatusForbidden {
 			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusForbidden)

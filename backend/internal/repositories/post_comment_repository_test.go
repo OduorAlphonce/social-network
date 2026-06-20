@@ -439,3 +439,121 @@ func assertPostIDs(t *testing.T, posts []*models.PostWithAuthor, expected ...uui
 		}
 	}
 }
+
+func TestCommentRepositoryCreateCommentAtomic(t *testing.T) {
+	db := newPostCommentTestDB(t)
+	ids := seedPostCommentTestRows(t, db)
+
+	commentRepo := NewCommentRepository(db)
+	postRepo := NewPostRepository(db)
+
+	postBefore, err := postRepo.GetPostByID(ids.postID, ids.viewerID)
+	if err != nil {
+		t.Fatalf("failed to fetch post: %v", err)
+	}
+	initialCount := postBefore.Post.CommentCount
+
+	newCommentID := uuid.Must(uuid.NewV4())
+	newComment := &models.Comment{
+		ID:              newCommentID,
+		PostID:          ids.postID,
+		UserID:          &ids.authorID,
+		ParentCommentID: nil,
+		Content:         "Brand new comment",
+		CreatedAt:       time.Now(),
+	}
+
+	err = commentRepo.CreateComment(newComment)
+	if err != nil {
+		t.Fatalf("CreateComment failed: %v", err)
+	}
+
+	postAfter, err := postRepo.GetPostByID(ids.postID, ids.viewerID)
+	if err != nil {
+		t.Fatalf("failed to fetch post after comment creation: %v", err)
+	}
+
+	expectedCount := initialCount + 1
+	if postAfter.Post.CommentCount != expectedCount {
+		t.Fatalf("post comment count = %d, want %d", postAfter.Post.CommentCount, expectedCount)
+	}
+
+	insertedComment, err := commentRepo.GetCommentByID(newCommentID, ids.viewerID)
+	if err != nil {
+		t.Fatalf("failed to fetch inserted comment: %v", err)
+	}
+	if insertedComment.Comment.Content != "Brand new comment" {
+		t.Fatalf("comment content = %q, want %q", insertedComment.Comment.Content, "Brand new comment")
+	}
+}
+
+func TestPostRepositoryUpdatePostWithAudience(t *testing.T) {
+	db := newPostCommentTestDB(t)
+	ids := seedPostCommentTestRows(t, db)
+
+	repo := NewPostRepository(db)
+	audRepo := NewPostAudienceRepository(db)
+
+	postRow, err := repo.GetPostByID(ids.postID, ids.viewerID)
+	if err != nil {
+		t.Fatalf("failed to fetch post: %v", err)
+	}
+
+	post := postRow.Post
+	post.Content = "Updated content"
+	post.Privacy = models.PostPrivacyPrivate
+	now := time.Now()
+	post.UpdatedAt = &now
+
+	newAudienceMember := ids.otherViewerID
+	err = repo.UpdatePostWithAudience(&post, []uuid.UUID{newAudienceMember})
+	if err != nil {
+		t.Fatalf("UpdatePostWithAudience failed: %v", err)
+	}
+
+	updatedRow, err := repo.GetPostByID(ids.postID, ids.viewerID)
+	if err != nil {
+		t.Fatalf("failed to fetch updated post: %v", err)
+	}
+
+	if updatedRow.Post.Content != "Updated content" {
+		t.Fatalf("content = %q, want %q", updatedRow.Post.Content, "Updated content")
+	}
+	if updatedRow.Post.Privacy != models.PostPrivacyPrivate {
+		t.Fatalf("privacy = %q, want %q", updatedRow.Post.Privacy, models.PostPrivacyPrivate)
+	}
+
+	audience, err := audRepo.ListPostAudience(ids.postID)
+	if err != nil {
+		t.Fatalf("ListPostAudience failed: %v", err)
+	}
+	if len(audience) != 1 || audience[0] != newAudienceMember {
+		t.Fatalf("audience = %#v, want only %s", audience, newAudienceMember)
+	}
+}
+
+func TestPostRepositoryDeletePost(t *testing.T) {
+	db := newPostCommentTestDB(t)
+	ids := seedPostCommentTestRows(t, db)
+
+	repo := NewPostRepository(db)
+	err := repo.DeletePost(ids.postID)
+	if err != nil {
+		t.Fatalf("DeletePost failed: %v", err)
+	}
+
+	deletedRow, err := repo.GetPostByID(ids.postID, ids.viewerID)
+	if err != nil {
+		t.Fatalf("GetPostByID failed after deletion: %v", err)
+	}
+
+	if deletedRow.Post.DeletedAt == nil {
+		t.Fatal("expected deleted_at to be set")
+	}
+	if deletedRow.Post.Content != "" {
+		t.Fatalf("content = %q, want empty", deletedRow.Post.Content)
+	}
+	if deletedRow.Post.ImageURL != nil {
+		t.Fatalf("image_url = %v, want nil", deletedRow.Post.ImageURL)
+	}
+}

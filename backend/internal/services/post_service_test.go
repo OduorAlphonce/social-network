@@ -314,6 +314,26 @@ func (r *fakePostRepository) ListGroupFeed(groupID, viewerID uuid.UUID, limit, o
 	return r.groupRows, nil
 }
 
+func (r *fakePostRepository) UpdatePostWithAudience(post *models.Post, audience []uuid.UUID) error {
+	if r.singleRow != nil && r.singleRow.Post.ID == post.ID {
+		r.singleRow.Post.Content = post.Content
+		r.singleRow.Post.Privacy = post.Privacy
+		r.singleRow.Post.ImageURL = post.ImageURL
+		r.singleRow.Post.UpdatedAt = post.UpdatedAt
+	}
+	return nil
+}
+
+func (r *fakePostRepository) DeletePost(id uuid.UUID) error {
+	if r.singleRow != nil && r.singleRow.Post.ID == id {
+		now := time.Now()
+		r.singleRow.Post.DeletedAt = &now
+		r.singleRow.Post.Content = ""
+		r.singleRow.Post.ImageURL = nil
+	}
+	return nil
+}
+
 type groupMemberKey struct {
 	groupID uuid.UUID
 	userID  uuid.UUID
@@ -514,8 +534,9 @@ func TestPostServiceCreatePost(t *testing.T) {
 }
 
 type fakeCommentRepository struct {
-	comments []*models.CommentWithAuthor
-	err      error
+	comments    []*models.CommentWithAuthor
+	commentsMap map[uuid.UUID]*models.CommentWithAuthor
+	err         error
 }
 
 func (f *fakeCommentRepository) CreateComment(comment *models.Comment) error {
@@ -523,7 +544,15 @@ func (f *fakeCommentRepository) CreateComment(comment *models.Comment) error {
 }
 
 func (f *fakeCommentRepository) GetCommentByID(id, viewerID uuid.UUID) (*models.CommentWithAuthor, error) {
-	return nil, nil
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.commentsMap != nil {
+		if c, ok := f.commentsMap[id]; ok {
+			return c, nil
+		}
+	}
+	return nil, errors.New("comment not found")
 }
 
 func (f *fakeCommentRepository) ListCommentTreeByPost(postID, viewerID uuid.UUID, limit, offset int) ([]*models.CommentWithAuthor, error) {
@@ -638,6 +667,269 @@ func TestPostServiceGetCommentsByPost(t *testing.T) {
 		}
 		if len(resp.Data) != 1 {
 			t.Fatalf("expected 1 comment, got %d", len(resp.Data))
+		}
+	})
+}
+
+func TestPostServiceCreateComment(t *testing.T) {
+	authorID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	strangerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000003"))
+	postID := uuid.Must(uuid.FromString("cccccccc-0000-0000-0000-000000000001"))
+	commentID := uuid.Must(uuid.FromString("11111111-0000-0000-0000-000000000001"))
+
+	t.Run("Create comment success", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, &authorID)
+		comments := newFakeCommentRepository()
+		users := newFakeUserRepository()
+		users.add(&models.User{
+			ID:        authorID,
+			FirstName: "John",
+			LastName:  "Doe",
+		})
+		service := NewPostService(posts, users, newFakeFollowersRepository(), newFakeGroupMembershipRepository(), comments)
+
+		req := &models.CreateCommentRequest{
+			PostID:  postID,
+			Content: "Great post!",
+		}
+		resp, err := service.CreateComment(context.Background(), req, authorID)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		activeComment, ok := resp.(*models.ActiveCommentResponse)
+		if !ok {
+			t.Fatalf("expected ActiveCommentResponse, got %T", resp)
+		}
+		if activeComment.Content != "Great post!" {
+			t.Fatalf("unexpected content: %s", activeComment.Content)
+		}
+	})
+
+	t.Run("Create comment fails if post is soft-deleted", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, &authorID)
+		deletedTime := time.Now()
+		posts.singleRow.Post.DeletedAt = &deletedTime
+		comments := newFakeCommentRepository()
+		service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository(), comments)
+
+		req := &models.CreateCommentRequest{
+			PostID:  postID,
+			Content: "Great post!",
+		}
+		_, err := service.CreateComment(context.Background(), req, authorID)
+		if !errors.Is(err, ErrPostOrCommentDeleted) {
+			t.Fatalf("expected ErrPostOrCommentDeleted, got %v", err)
+		}
+	})
+
+	t.Run("Create comment fails if user has no view permission", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPrivate, &authorID)
+		comments := newFakeCommentRepository()
+		service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository(), comments)
+
+		req := &models.CreateCommentRequest{
+			PostID:  postID,
+			Content: "Great post!",
+		}
+		_, err := service.CreateComment(context.Background(), req, strangerID)
+		if !errors.Is(err, ErrPostForbidden) {
+			t.Fatalf("expected ErrPostForbidden, got %v", err)
+		}
+	})
+
+	t.Run("Create comment fails if parent comment does not exist", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, &authorID)
+		comments := newFakeCommentRepository()
+		service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository(), comments)
+
+		req := &models.CreateCommentRequest{
+			PostID:          postID,
+			ParentCommentID: &commentID,
+			Content:         "Great post!",
+		}
+		_, err := service.CreateComment(context.Background(), req, authorID)
+		if !errors.Is(err, ErrCommentNotFound) {
+			t.Fatalf("expected ErrCommentNotFound, got %v", err)
+		}
+	})
+
+	t.Run("Create comment fails if parent comment belongs to different post", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, &authorID)
+		comments := newFakeCommentRepository()
+		otherPostID := uuid.Must(uuid.NewV4())
+		comments.commentsMap = map[uuid.UUID]*models.CommentWithAuthor{
+			commentID: {
+				Comment: models.Comment{
+					ID:     commentID,
+					PostID: otherPostID,
+				},
+			},
+		}
+		service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository(), comments)
+
+		req := &models.CreateCommentRequest{
+			PostID:          postID,
+			ParentCommentID: &commentID,
+			Content:         "Great post!",
+		}
+		_, err := service.CreateComment(context.Background(), req, authorID)
+		if !errors.Is(err, ErrCrossPostParent) {
+			t.Fatalf("expected ErrCrossPostParent, got %v", err)
+		}
+	})
+
+	t.Run("Create comment fails if parent comment is soft-deleted", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, &authorID)
+		comments := newFakeCommentRepository()
+		deletedTime := time.Now()
+		comments.commentsMap = map[uuid.UUID]*models.CommentWithAuthor{
+			commentID: {
+				Comment: models.Comment{
+					ID:        commentID,
+					PostID:    postID,
+					DeletedAt: &deletedTime,
+				},
+			},
+		}
+		service := NewPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository(), comments)
+
+		req := &models.CreateCommentRequest{
+			PostID:          postID,
+			ParentCommentID: &commentID,
+			Content:         "Great post!",
+		}
+		_, err := service.CreateComment(context.Background(), req, authorID)
+		if !errors.Is(err, ErrPostOrCommentDeleted) {
+			t.Fatalf("expected ErrPostOrCommentDeleted, got %v", err)
+		}
+	})
+}
+
+func TestPostServiceUpdatePost(t *testing.T) {
+	authorID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	strangerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000003"))
+	postID := uuid.Must(uuid.FromString("cccccccc-0000-0000-0000-000000000001"))
+
+	t.Run("Author updates post successfully", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, &authorID)
+		service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+
+		content := "Updated Content"
+		privacy := models.PostPrivacyPublic
+		req := &models.UpdatePostRequest{
+			Content: &content,
+			Privacy: &privacy,
+		}
+
+		resp, err := service.UpdatePost(context.Background(), postID.String(), req, authorID)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		activePost, ok := resp.(*models.ActivePostResponse)
+		if !ok {
+			t.Fatalf("expected ActivePostResponse, got %T", resp)
+		}
+		if activePost.Content != "Updated Content" {
+			t.Fatalf("content = %q, want %q", activePost.Content, "Updated Content")
+		}
+		if activePost.UpdatedAt == nil {
+			t.Fatal("expected UpdatedAt to be set")
+		}
+	})
+
+	t.Run("Non-author edit fails", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, &authorID)
+		service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+
+		content := "Updated Content"
+		req := &models.UpdatePostRequest{
+			Content: &content,
+		}
+
+		_, err := service.UpdatePost(context.Background(), postID.String(), req, strangerID)
+		if !errors.Is(err, ErrForbidden) {
+			t.Fatalf("expected ErrForbidden, got %v", err)
+		}
+	})
+
+	t.Run("Edit fails if post is deleted", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, &authorID)
+		deletedTime := time.Now()
+		posts.singleRow.Post.DeletedAt = &deletedTime
+		service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+
+		content := "Updated Content"
+		req := &models.UpdatePostRequest{
+			Content: &content,
+		}
+
+		_, err := service.UpdatePost(context.Background(), postID.String(), req, authorID)
+		if !errors.Is(err, ErrPostOrCommentDeleted) {
+			t.Fatalf("expected ErrPostOrCommentDeleted, got %v", err)
+		}
+	})
+}
+
+func TestPostServiceDeletePost(t *testing.T) {
+	authorID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000001"))
+	strangerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000003"))
+	postID := uuid.Must(uuid.FromString("cccccccc-0000-0000-0000-000000000001"))
+
+	t.Run("Author deletes post successfully", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, &authorID)
+		service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+
+		resp, err := service.DeletePost(context.Background(), postID.String(), authorID)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		deletedPost, ok := resp.(*models.DeletedPostResponse)
+		if !ok {
+			t.Fatalf("expected DeletedPostResponse, got %T", resp)
+		}
+		if !deletedPost.Deleted {
+			t.Fatal("expected Deleted = true")
+		}
+	})
+
+	t.Run("Non-author delete fails", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, &authorID)
+		service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+
+		_, err := service.DeletePost(context.Background(), postID.String(), strangerID)
+		if !errors.Is(err, ErrForbidden) {
+			t.Fatalf("expected ErrForbidden, got %v", err)
+		}
+	})
+
+	t.Run("Repeated delete is idempotent", func(t *testing.T) {
+		posts := newFakePostRepository()
+		posts.singleRow = makeSinglePostRow(t, postID, models.PostPrivacyPublic, &authorID)
+		deletedTime := time.Now()
+		posts.singleRow.Post.DeletedAt = &deletedTime
+		service := newTestPostService(posts, newFakeUserRepository(), newFakeFollowersRepository(), newFakeGroupMembershipRepository())
+
+		resp, err := service.DeletePost(context.Background(), postID.String(), authorID)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		deletedPost, ok := resp.(*models.DeletedPostResponse)
+		if !ok {
+			t.Fatalf("expected DeletedPostResponse, got %T", resp)
+		}
+		if !deletedPost.Deleted {
+			t.Fatal("expected Deleted = true")
 		}
 	})
 }
