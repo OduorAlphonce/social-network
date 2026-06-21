@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "../styles/RegisterForm.css";
+import { useNavigate } from "react-router";
 import { apiFetch } from "../utils/api";
 
 const INITIAL_FORM = {
@@ -22,6 +23,7 @@ const RegisterForm = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();  
 
   // ---------- Handlers ----------
 
@@ -131,17 +133,20 @@ const RegisterForm = () => {
         body: data,
       });
 
-      setSuccess("Registration successful! You can now log in.");
-      setFormData(INITIAL_FORM);
-      setAvatar(null);
-      setAvatarPreview(null);
-      setStep(1);
+      // Redirect to login page with a success flag
+      navigate("/login", { 
+        state: { registered: true },
+        replace: true 
+      });
+      
     } catch (err) {
       setError(err.message || "Registration failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+
 
   // ---------- Step 1: Required Details ----------
 

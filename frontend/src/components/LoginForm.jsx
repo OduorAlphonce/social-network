@@ -7,18 +7,22 @@ const LoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Redirect to where they came from, or home
   const from = location.state?.from?.pathname || "/";
+
+  // Check if user just registered
+  const justRegistered = location.state?.registered;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setIsSubmitting(true);
 
     try {
@@ -34,6 +38,13 @@ const LoginForm = () => {
   return (
     <div className="login-form-container">
       <h2>Login</h2>
+
+      {/* Success banner for newly registered users */}
+      {justRegistered && (
+        <div className="success-message">
+          Registration successful! Please log in with your new account.
+        </div>
+      )}
       {error && <div className="error-message">{error}</div>}
       <form onSubmit={handleSubmit} className="login-form">
         <div className="form-group">
