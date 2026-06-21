@@ -2,14 +2,19 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px;
+  padding: var(--space-3);
+  gap: var(--space-4);
+  width: 100%;
+  background: var(--bg-deep);
 }
 
 .comments {
-  width: 50%;
-  padding: 8px;
-  margin-left: 10px;
+  width: 100%;
+  max-width: 700px;
+  padding: var(--space-2) var(--space-3);
+  margin-left: 0;
   display: flex;
   flex-direction: column;
-  align-items: start;
+  align-items: flex-start;
+  gap: var(--space-3);
 }
