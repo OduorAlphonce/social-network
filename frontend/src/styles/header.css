@@ -2,31 +2,91 @@
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  padding: 0px 20px;
+  align-items: center;
+  padding: 0 var(--space-5);
+  height: 100%;
+  background: var(--bg-elevated);
+  border-bottom: var(--border-thin) solid var(--card-border);
 }
 
 .profile-photo {
-  border-radius: 50%;
-  border: 1px solid;
+  border-radius: var(--radius-full);
+  border: var(--border-thin) solid var(--card-border);
   width: 32px;
   height: 32px;
-  padding: 5px;
+  padding: 0;
+  object-fit: cover;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out-expo),
+              box-shadow var(--duration-fast) var(--ease-out-expo);
+}
+
+.profile-photo:hover {
+  border-color: var(--hyperpop-violet);
+  box-shadow: var(--shadow-neon-sm) rgba(139, 92, 246, 0.4);
 }
 
 .pretitle,
 .icons {
   display: flex;
   flex-direction: row;
-  gap: 10px;
+  gap: var(--space-3);
   align-items: center;
 }
 
 .search {
-  border-radius: 20px;
-  height: 24px;
+  border-radius: var(--radius-full);
+  height: 36px;
   width: 250px;
-  padding: 1px 10px;
-  border: 1px solid black;
-  color: black;
-  background-color: transparent;
+  padding: var(--space-1) var(--space-4);
+  border: var(--border-thin) solid var(--input-border);
+  color: var(--text-primary);
+  background-color: var(--input-bg);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  transition: border-color var(--duration-fast) var(--ease-out-expo),
+              box-shadow var(--duration-fast) var(--ease-out-expo),
+              width var(--duration-base) var(--ease-out-expo);
+  outline: none;
+}
+
+.search::placeholder {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.search:focus {
+  border-color: var(--hyperpop-violet);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  width: 300px;
+}
+
+/* Icons inside the header */
+.icons svg,
+.pretitle svg {
+  color: var(--icon-inactive);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out-expo),
+              filter var(--duration-fast) var(--ease-out-expo);
+}
+
+.icons svg:hover,
+.pretitle svg:hover {
+  color: var(--hyperpop-violet);
+  filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.5));
+}
+
+/* Logo or platform name in pretitle */
+.pretitle > span,
+.pretitle > strong {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+  letter-spacing: var(--tracking-wide);
+}
+
+.pretitle > span > span,
+.pretitle .accent {
+  color: var(--acid-green);
 }

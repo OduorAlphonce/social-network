@@ -2,11 +2,13 @@
   display: flex;
   flex-direction: row;
   width: 100%;
+  height: 100%;
+  background: var(--bg-deep);
 }
+
 .posts {
-  display: flex;
-  flex-direction: column;
   align-items: center;
   width: 100%;
-  margin: 10px;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
 }

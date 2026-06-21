@@ -113,15 +113,18 @@ const Post = ({ post }) => {
         <div>{post["comment_count"]} Comments</div>
       </div>
       <div className="post-footer">
-        <div className="reaction-container">
+        
+        <div>
           <Like like={like} isActive={likePost} />
+        </div>
+        <div>
           <Dislike dislike={dislike} isActive={dislikePost} />
         </div>
         <div>
-          <p className="links">Comment</p>
+          <p className="reaction-button">Comment</p>
         </div>
         <div>
-          <p className="links">Share</p>
+          <p className="reaction-button">Share</p>
         </div>
       </div>
     </div>
