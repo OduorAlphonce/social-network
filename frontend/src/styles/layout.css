@@ -2,9 +2,9 @@
   display: grid;
   grid-template-columns: 250px 1fr 450px;
   grid-template-rows: auto 1fr auto;
-  height: calc(100dvh);
-  width: calc(100%);
-  background: rgba(239, 240, 247, 0.726);
+  height: 100dvh;
+  width: 100%;
+  background: var(--bg-deep);
 }
 
 .sidebar {
@@ -13,37 +13,128 @@
   max-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 20px 20px;
+  gap: var(--space-3);
+  padding: var(--space-5);
   list-style: none;
   align-items: flex-start;
+  border-right: var(--border-thin) solid var(--card-border);
 }
 
 .links {
   display: flex;
-  gap: 10px;
-  padding: 10px;
+  gap: var(--space-3);
+  padding: var(--space-3);
   align-items: center;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border-radius: var(--radius-soft);
+  transition: background-color var(--duration-fast) var(--ease-out-expo),
+              color var(--duration-fast) var(--ease-out-expo),
+              box-shadow var(--duration-fast) var(--ease-out-expo);
 }
 
 .links:hover {
-  background-color: rgba(0, 74, 211, 0.315);
-  width: 70%;
-  border-radius: 10px;
+  background-color: var(--bg-surface);
+  color: var(--acid-green);
+  width: 80%;
   cursor: pointer;
+  box-shadow: var(--shadow-neon-sm) rgba(204, 255, 0, 0.15);
+}
+
+/* Active state for current page */
+.links[aria-current="page"],
+.links--active {
+  background-color: var(--bg-surface);
+  color: var(--acid-green);
+  width: 80%;
+  border-left: var(--border-thick) solid var(--acid-green);
+  box-shadow: var(--shadow-neon-sm) rgba(204, 255, 0, 0.2);
+  font-weight: 600;
 }
 
 .header {
-  border: 1px solid;
-  grid-column: 1/-1;
+  border-bottom: var(--border-thin) solid var(--card-border);
+  background: var(--bg-elevated);
+  grid-column: 1 / -1;
   grid-row: 1;
   height: 70px;
+  padding: 0 var(--space-5);
+  display: flex;
+  align-items: center;
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
 }
 
 .main-content {
-  border-left: 1px solid;
-  scrollbar-width: none;
+  border-left: var(--border-thin) solid var(--card-border);
+  border-right: var(--border-thin) solid var(--card-border);
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-surface) transparent;
   overflow-y: auto;
   height: 100%;
-  width: calc(100% - 5px);
+  width: 100%;
+  padding: var(--space-4);
+}
+
+/* Optional: Right sidebar if you're using a 3-column layout */
+.right-sidebar {
+  max-width: 450px;
+  width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--space-5);
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-surface) transparent;
+}
+
+/* Webkit scrollbar styling for main content */
+.main-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: var(--bg-surface);
+  border-radius: var(--radius-full);
+}
+
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: var(--hyperpop-violet);
+}
+
+/* Responsive: collapse right sidebar on smaller screens */
+@media (max-width: 1200px) {
+  .main-container {
+    grid-template-columns: 250px 1fr;
+  }
+
+  .right-sidebar {
+    display: none;
+  }
+}
+
+/* Responsive: collapse to single column on mobile */
+@media (max-width: 768px) {
+  .main-container {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .main-content {
+    border-left: none;
+  }
+
+  .header {
+    grid-column: 1;
+  }
 }
