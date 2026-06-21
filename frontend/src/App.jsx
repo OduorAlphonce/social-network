@@ -1,5 +1,4 @@
 import { Route, Routes } from "react-router";
-import "./styles/App.css";
 import Layout from "./components/layout/Layout";
 import Events from "./pages/Events.jsx";
 import Groups from "./pages/Groups.jsx";
