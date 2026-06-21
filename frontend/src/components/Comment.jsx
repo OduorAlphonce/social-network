@@ -1,5 +1,6 @@
 import "../styles/comment.css";
 import avatar from "../assets/user.svg";
+import { Like } from "./Reactions";
 
 const Comment = ({ comment }) => {
   const authorName = comment?.author
@@ -18,8 +19,11 @@ const Comment = ({ comment }) => {
           <strong>{authorName || "Anonymous"}</strong>
           <p>{comment?.content}</p>
         </div>
-        <div>
-          {comment?.time} <span>Like</span> <span>Reply</span>
+        <div className="comment-footer">
+          {comment?.time} 
+          <div className="comment-reaction">
+          <span className="comment-like"><Like/></span> <span className="comment-reply">Reply</span>
+          </div>
         </div>
       </div>
     </div>

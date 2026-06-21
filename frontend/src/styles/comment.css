@@ -1,9 +1,11 @@
 .profile-photo {
-  border-radius: 50%;
-  border: 1px solid;
+  border-radius: var(--radius-full);
+  border: var(--border-thin) solid var(--card-border);
   width: 32px;
   height: 32px;
-  padding: 5px;
+  padding: 0;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 #comment-container {
@@ -11,27 +13,57 @@
   display: flex;
   flex-direction: row;
   text-align: left;
-  gap: 5px;
-  font-size: 13px;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 .comment-body {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  gap: var(--space-1);
+}
+
+.comment-footer {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.comment-reaction {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+}
+
+.comment-like {
+  width: 18px;
+}
+
+.comment-reply {
+  padding-top: 5px;
+  width: 18px;
+  font-size: var(--text-primary);
 }
 
 .comment-details {
-  background-color: rgba(146, 146, 146, 0.199);
-  border-radius: 10px;
-  padding: 0px 10px;
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-soft);
+  padding: var(--space-2) var(--space-3);
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .comment-details > strong {
-  margin-bottom: -15px;
+  margin-bottom: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: var(--text-xs);
 }
 
 .comment-body > div > span {
   font-weight: 500;
+  color: var(--text-secondary);
 }
