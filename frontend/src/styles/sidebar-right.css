@@ -1,10 +1,19 @@
 .quick-links {
-  margin-top: 20px;
-  background-color: #ffffffa9;
+  margin-top: var(--space-5);
+  background-color: var(--card-bg);
+  border: var(--border-thin) solid var(--card-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  box-shadow: var(--card-shadow);
 }
 
 .upcoming-events {
   width: 100%;
+  background-color: var(--card-bg);
+  border: var(--border-thin) solid var(--card-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  box-shadow: var(--card-shadow);
 }
 
 @media (min-width: 600px) {
