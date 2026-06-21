@@ -23,11 +23,12 @@
 .links {
   display: flex;
   gap: var(--space-3);
-  padding: var(--space-3);
+  margin-left: var(--space-3);
+  padding: var(--space-4);
   align-items: center;
   color: var(--text-secondary);
   font-family: var(--font-body);
-  font-size: var(--text-sm);
+  font-size: var(--text-lg);
   font-weight: 500;
   border-radius: var(--radius-soft);
   transition: background-color var(--duration-fast) var(--ease-out-expo),
@@ -38,7 +39,7 @@
 .links:hover {
   background-color: var(--bg-surface);
   color: var(--acid-green);
-  width: 80%;
+  width: 110%;
   cursor: pointer;
   box-shadow: var(--shadow-neon-sm) rgba(204, 255, 0, 0.15);
 }
