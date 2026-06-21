@@ -1,8 +1,10 @@
+/* POST CARDS */
+
 .post-container {
   background-color: var(--card-bg);
   border: var(--border-thin) solid var(--card-border);
   border-radius: var(--radius-xl);
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -10,8 +12,10 @@
   padding: var(--space-5);
   margin: var(--space-5) auto;
   box-shadow: var(--card-shadow);
+  cursor: pointer;
   transition: border-color var(--duration-base) var(--ease-out-expo),
-              box-shadow var(--duration-base) var(--ease-out-expo);
+              box-shadow var(--duration-base) var(--ease-out-expo),
+              transform var(--duration-fast) var(--ease-out-expo);
 }
 
 .post-container:hover {
@@ -19,11 +23,29 @@
   box-shadow: var(--glow-violet);
 }
 
+.post-container:active {
+  transform: scale(0.995);
+}
+
+/* ---------- Top Bar ---------- */
+
+.top-bar {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  margin-bottom: var(--space-3);
+}
+
+/* ---------- Header ---------- */
+
 .post-header {
   display: flex;
   flex-direction: row;
   gap: var(--space-3);
-  margin-bottom: var(--space-3);
+  flex: 1;
+  min-width: 0;
 }
 
 .profile-photo {
@@ -34,11 +56,14 @@
   padding: 0;
   object-fit: cover;
   flex-shrink: 0;
-  transition: border-color var(--duration-fast) var(--ease-out-expo);
+  background-color: var(--bg-surface);
+  transition: border-color var(--duration-fast) var(--ease-out-expo),
+              box-shadow var(--duration-fast) var(--ease-out-expo);
 }
 
 .post-container:hover .profile-photo {
   border-color: var(--hyperpop-violet);
+  box-shadow: var(--shadow-neon-sm) rgba(139, 92, 246, 0.3);
 }
 
 .post-bio {
@@ -46,6 +71,8 @@
   flex-direction: column;
   justify-content: center;
   flex: 1;
+  min-width: 0;
+  gap: 2px;
 }
 
 .post-bio h5 {
@@ -54,37 +81,49 @@
   font-size: var(--text-base);
   font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.top-bar {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
+.post-bio small {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: 400;
 }
+
+/* ---------- Visibility Badge ---------- */
 
 .visibility {
   color: var(--text-muted);
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-1);
   align-items: center;
-  padding: 0 var(--space-4);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  flex-shrink: 0;
 }
 
-.visibility > span {
+.visibility svg {
   font-size: var(--text-sm);
 }
+
+/* ---------- Post Body ---------- */
 
 .post-body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  margin: var(--space-2) 0 var(--space-3) 0;
+  margin: 0 0 var(--space-3) 0;
   width: 100%;
   font-size: var(--text-base);
   line-height: var(--leading-normal);
   color: var(--text-primary);
+  word-break: break-word;
+}
+
+.post-body p {
+  margin: 0;
 }
 
 .post-image {
@@ -96,17 +135,134 @@
   max-height: 500px;
   width: 100%;
   border: var(--border-thin) solid var(--card-border);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out-expo);
 }
+
+.post-image:hover {
+  border-color: var(--hyperpop-violet);
+}
+
+/* ---------- Reaction Count Row ---------- */
+
+.reaction-count {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+  margin-bottom: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.reaction-count .center {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.reaction-count .center svg {
+  font-size: var(--text-base);
+}
+
+/* ---------- Footer ---------- */
 
 .post-footer {
   display: flex;
   flex-direction: row;
-  gap: var(--space-4);
+  gap: 0;
   justify-content: space-evenly;
   border-top: var(--border-thin) solid var(--card-border);
-  padding: var(--space-3) 0 var(--space-1) 0;
+  padding: var(--space-3) 0 0 0;
   align-items: center;
   margin-top: var(--space-1);
+}
+
+.post-footer > div {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+/* Footer buttons — Comment and Share */
+.post-footer > div > p {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--icon-inactive);
+  border-radius: var(--radius-soft);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out-expo),
+              color var(--duration-fast) var(--ease-out-expo);
+}
+
+.post-footer > div > p:hover {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+/* ---------- Reaction Buttons ---------- */
+
+.reaction-button {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: var(--icon-inactive);
+  cursor: pointer;
+  display: inline-flex;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-soft);
+  transition: background-color var(--duration-fast) var(--ease-out-expo),
+              color var(--duration-fast) var(--ease-out-expo),
+              text-shadow var(--duration-fast) var(--ease-out-expo);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  gap: var(--space-1);
+}
+
+.reaction-button:hover {
+  background-color: var(--bg-surface);
+}
+
+/* Like active state */
+.reaction-button[aria-label="Like"]:hover,
+.reaction-button.is-like-active {
+  color: var(--toxic-cyan);
+  text-shadow: var(--shadow-neon-sm) rgba(0, 240, 255, 0.5);
+}
+
+.reaction-button[aria-label="Like"]:hover svg,
+.reaction-button.is-like-active svg {
+  fill: var(--toxic-cyan);
+  filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.6));
+}
+
+/* Dislike active state */
+.reaction-button[aria-label="Dislike"]:hover,
+.reaction-button.is-dislike-active {
+  color: var(--punch-pink);
+  text-shadow: var(--shadow-neon-sm) rgba(255, 51, 102, 0.5);
+}
+
+.reaction-button[aria-label="Dislike"]:hover svg,
+.reaction-button.is-dislike-active svg {
+  fill: var(--punch-pink);
+  filter: drop-shadow(0 0 4px rgba(255, 51, 102, 0.6));
+}
+
+/* ---------- Legacy class names ---------- */
+
+.reaction-like {
+  color: var(--toxic-cyan);
+}
+
+.reaction-dislike {
+  color: var(--punch-pink);
 }
 
 .reaction-container {
@@ -117,92 +273,14 @@
   gap: var(--space-4);
 }
 
-.reaction-button {
-  align-items: center;
-  background: none;
-  border: 0;
-  color: var(--icon-inactive);
-  cursor: pointer;
-  display: inline-flex;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-soft);
-  transition: background-color var(--duration-fast) var(--ease-out-expo),
-              color var(--duration-fast) var(--ease-out-expo);
-  font-size: var(--text-sm);
-  gap: var(--space-1);
-}
-
-.reaction-button:hover {
-  background-color: var(--bg-surface);
-}
-
-.reaction-count {
-  padding: var(--space-1) 0;
-  display: flex;
-  justify-content: flex-start;
-  gap: var(--space-5);
-  margin-bottom: var(--space-1);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-/* Chaos-style reaction colors — electric, not corporate */
-.reaction-like {
-  color: var(--toxic-cyan);
-}
-
-.reaction-dislike {
-  color: var(--punch-pink);
-}
-
-.reaction-button[aria-label="Like"]:hover {
-  color: var(--toxic-cyan);
-  text-shadow: var(--shadow-neon-sm) rgba(0, 240, 255, 0.5);
-}
-
-.reaction-button[aria-label="Like"]:hover svg {
-  fill: var(--toxic-cyan);
-  filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.6));
-}
-
-.reaction-button[aria-label="Dislike"]:hover {
-  color: var(--punch-pink);
-  text-shadow: var(--shadow-neon-sm) rgba(255, 51, 102, 0.5);
-}
-
-.reaction-button[aria-label="Dislike"]:hover svg {
-  fill: var(--punch-pink);
-  filter: drop-shadow(0 0 4px rgba(255, 51, 102, 0.6));
-}
-
-.links {
-  padding: var(--space-1) var(--space-4);
-  border: var(--border-thin) solid transparent;
-  border-radius: var(--radius-soft);
-  min-width: 60px;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  transition: background-color var(--duration-fast) var(--ease-out-expo),
-              color var(--duration-fast) var(--ease-out-expo),
-              border-color var(--duration-fast) var(--ease-out-expo);
-  cursor: pointer;
-  background: none;
-  color: var(--text-secondary);
-}
-
-.links:hover {
-  background-color: var(--bg-surface);
-  color: var(--text-primary);
-  border-color: var(--card-border);
-}
-
 .center {
   display: flex;
   gap: var(--space-2);
   align-items: center;
 }
 
-/* Desktop-specific improvements */
+/* RESPONSIVE */
+
 @media (min-width: 1024px) {
   .post-container {
     max-width: 700px;
@@ -221,12 +299,11 @@
   }
 
   .post-footer {
-    gap: var(--space-5);
-    padding: 14px 0 var(--space-1) 0;
+    padding: var(--space-3) 0 0 0;
   }
 
   .reaction-button {
-    padding: var(--space-2) 14px;
+    padding: var(--space-2) var(--space-5);
     font-size: var(--text-base);
   }
 
@@ -235,7 +312,6 @@
   }
 }
 
-/* For very large screens (1440px+) */
 @media (min-width: 1440px) {
   .post-container {
     max-width: 780px;
@@ -247,7 +323,6 @@
   }
 }
 
-/* Responsive for tablet and smaller */
 @media (max-width: 768px) {
   .post-container {
     padding: var(--space-4);
@@ -266,18 +341,23 @@
 
   .post-footer {
     flex-wrap: wrap;
-    gap: var(--space-2);
-    padding: var(--space-3) 0 var(--space-1) 0;
+    gap: var(--space-1);
+    padding: var(--space-2) 0 0 0;
+  }
+
+  .post-footer > div > p {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-xs);
+  }
+
+  .reaction-button {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-xs);
   }
 
   .reaction-container {
     display: flex;
     justify-content: space-evenly;
-  }
-
-  .reaction-button {
-    padding: var(--space-1) var(--space-2);
-    font-size: var(--text-xs);
   }
 
   .links {
