@@ -52,6 +52,8 @@ type PostService interface {
 	CreateComment(ctx context.Context, req *models.CreateCommentRequest, authorID uuid.UUID) (models.CommentResponse, error)
 	UpdatePost(ctx context.Context, postID string, req *models.UpdatePostRequest, authorID uuid.UUID) (models.PostResponse, error)
 	DeletePost(ctx context.Context, postID string, authorID uuid.UUID) (models.PostResponse, error)
+	UpdateComment(ctx context.Context, commentID string, req *models.UpdateCommentRequest, authorID uuid.UUID) (models.CommentResponse, error)
+	DeleteComment(ctx context.Context, commentID string, authorID uuid.UUID) (models.CommentResponse, error)
 }
 
 type postService struct {
@@ -627,5 +629,132 @@ func (s *postService) DeletePost(ctx context.Context, postID string, authorID uu
 	return &models.DeletedPostResponse{
 		ID:      row.Post.ID,
 		Deleted: true,
+	}, nil
+}
+
+func (s *postService) UpdateComment(ctx context.Context, commentID string, req *models.UpdateCommentRequest, authorID uuid.UUID) (models.CommentResponse, error) {
+	cID, err := uuid.FromString(commentID)
+	if err != nil {
+		return nil, ErrCommentNotFound
+	}
+
+	row, err := s.commentRepo.GetCommentByID(cID, authorID)
+	if err != nil {
+		return nil, ErrCommentNotFound
+	}
+
+	// 1. Comment author check
+	if row.Comment.UserID == nil || *row.Comment.UserID != authorID {
+		return nil, ErrForbidden
+	}
+
+	// 2. Reject edits to deleted comments
+	if row.Comment.DeletedAt != nil {
+		return nil, ErrPostOrCommentDeleted
+	}
+
+	// 3. Reject edits if the comment belongs to a deleted post
+	postRow, err := s.postRepo.GetPostByID(row.Comment.PostID, authorID)
+	if err != nil {
+		return nil, ErrPostNotFound
+	}
+	if postRow.Post.DeletedAt != nil {
+		return nil, ErrPostOrCommentDeleted
+	}
+
+	updatedComment := row.Comment
+
+	// 4. Update content
+	if req.Content != nil {
+		content := *req.Content
+		trimmedContent := strings.TrimSpace(content)
+
+		hasImage := false
+		if req.ImageURL != nil {
+			hasImage = true
+		} else if updatedComment.ImageURL != nil && !req.RemoveImage {
+			hasImage = true
+		}
+
+		if trimmedContent == "" && !hasImage {
+			return nil, errors.New("either content or image is required")
+		}
+		updatedComment.Content = trimmedContent
+	}
+
+	// 5. Update image
+	if req.RemoveImage {
+		updatedComment.ImageURL = nil
+	}
+	if req.ImageURL != nil {
+		updatedComment.ImageURL = req.ImageURL
+	}
+
+	now := time.Now()
+	updatedComment.UpdatedAt = &now
+
+	err = s.commentRepo.UpdateComment(&updatedComment)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch updated comment to return
+	updatedRow, err := s.commentRepo.GetCommentByID(cID, authorID)
+	if err != nil {
+		return nil, err
+	}
+
+	return models.MapCommentResponse(updatedRow, []models.CommentResponse{})
+}
+
+func (s *postService) DeleteComment(ctx context.Context, commentID string, authorID uuid.UUID) (models.CommentResponse, error) {
+	cID, err := uuid.FromString(commentID)
+	if err != nil {
+		return nil, ErrCommentNotFound
+	}
+
+	row, err := s.commentRepo.GetCommentByID(cID, authorID)
+	if err != nil {
+		return nil, ErrCommentNotFound
+	}
+
+	// Idempotency: if already soft-deleted, return the minimal tombstone.
+	if row.Comment.DeletedAt != nil {
+		return &models.DeletedCommentResponse{
+			ID:      row.Comment.ID,
+			Deleted: true,
+			Replies: []models.CommentResponse{},
+		}, nil
+	}
+
+	// 1. Authorization: Allowed for the comment author OR parent post author.
+	isCommentAuthor := row.Comment.UserID != nil && *row.Comment.UserID == authorID
+	isPostAuthor := false
+
+	postRow, err := s.postRepo.GetPostByID(row.Comment.PostID, authorID)
+	if err == nil && postRow.Post.UserID != nil && *postRow.Post.UserID == authorID {
+		isPostAuthor = true
+	}
+
+	if !isCommentAuthor && !isPostAuthor {
+		return nil, ErrForbidden
+	}
+
+	// 2. Perform soft-delete
+	now := time.Now()
+	err = s.commentRepo.DeleteComment(cID, now)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Remove media file if existed
+	if row.Comment.ImageURL != nil {
+		_ = utils.DeleteImage(*row.Comment.ImageURL)
+	}
+
+	return &models.DeletedCommentResponse{
+		ID:      row.Comment.ID,
+		Deleted: true,
+		Replies: []models.CommentResponse{},
 	}, nil
 }
