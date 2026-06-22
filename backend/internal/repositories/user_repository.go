@@ -3,6 +3,7 @@ package repositories
 import (
 	"database/sql"
 	"errors"
+	"strings"
 
 	"github.com/gofrs/uuid/v5"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
@@ -88,6 +89,59 @@ func (ur *userRepository) UpdateUserProfile(u *models.User) error {
 	`
 	_, err := ur.db.Exec(query, u.Email, u.PassHash, u.FirstName, u.LastName, u.DOB, u.Avatar, u.Nickname, u.AboutMe, u.IsPublic, u.ID.String())
 	return err
+}
+
+func (ur *userRepository) ListPublicUsers(queryText string, excludeID uuid.UUID) ([]*models.User, error) {
+	var rows *sql.Rows
+	var err error
+	if queryText == "" {
+		rows, err = ur.db.Query(
+			`SELECT id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, follower_count, following_count, created_at
+			 FROM users
+			 WHERE is_public = 1 AND id != ?
+			 ORDER BY created_at DESC
+			 LIMIT 50`, excludeID)
+	} else {
+		search := "%" + strings.ToLower(strings.TrimSpace(queryText)) + "%"
+		rows, err = ur.db.Query(
+			`SELECT id, email, password_hash, first_name, last_name, dob, avatar, nickname, about_me, is_public, follower_count, following_count, created_at
+			 FROM users
+			 WHERE is_public = 1 AND id != ? AND (
+				LOWER(nickname) LIKE ? OR LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ?
+			 )
+			 ORDER BY created_at DESC
+			 LIMIT 50`, excludeID, search, search, search)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		u := &models.User{}
+		var avatar, nickname, aboutMe sql.NullString
+		var dob, createdAt string
+		err := rows.Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &dob, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &createdAt)
+		if err != nil {
+			return nil, err
+		}
+		parsedDOB, err := parseSQLiteTime(dob)
+		if err != nil {
+			return nil, err
+		}
+		parsedCreatedAt, err := parseSQLiteTime(createdAt)
+		if err != nil {
+			return nil, err
+		}
+		u.DOB = parsedDOB
+		u.CreatedAt = parsedCreatedAt
+		u.Avatar = avatar.String
+		u.Nickname = nickname.String
+		u.AboutMe = aboutMe.String
+		users = append(users, u)
+	}
+	return users, nil
 }
 
 // DeleteUser is a stub to satisfy the interface; @fcharles is implementing this.
