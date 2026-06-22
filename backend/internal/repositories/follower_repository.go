@@ -161,3 +161,42 @@ func (r *sqliteFollowerRepository) GetFollowing(userID uuid.UUID) ([]*models.Use
 	}
 	return users, nil
 }
+
+func (r *sqliteFollowerRepository) GetPendingFollowers(userID uuid.UUID) ([]*models.User, error) {
+	query := `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.dob, u.avatar, u.nickname, u.about_me, u.is_public, u.follower_count, u.following_count, u.created_at 
+	FROM followers f 
+	JOIN users u ON f.follower_id = u.id 
+	WHERE f.followee_id = ? AND f.status = 'pending'`
+
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		u := &models.User{}
+		var avatar, nickname, aboutMe sql.NullString
+		var dob, createdAt string
+		err := rows.Scan(&u.ID, &u.Email, &u.PassHash, &u.FirstName, &u.LastName, &dob, &avatar, &nickname, &aboutMe, &u.IsPublic, &u.FollowerCount, &u.FollowingCount, &createdAt)
+		if err != nil {
+			return nil, err
+		}
+		parsedDOB, err := parseSQLiteTime(dob)
+		if err != nil {
+			return nil, err
+		}
+		parsedCreatedAt, err := parseSQLiteTime(createdAt)
+		if err != nil {
+			return nil, err
+		}
+		u.DOB = parsedDOB
+		u.CreatedAt = parsedCreatedAt
+		u.Avatar = avatar.String
+		u.Nickname = nickname.String
+		u.AboutMe = aboutMe.String
+		users = append(users, u)
+	}
+	return users, nil
+}
