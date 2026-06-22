@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"time"
+
 	"github.com/gofrs/uuid/v5"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
 )
@@ -50,6 +52,8 @@ type CommentRepository interface {
 	CreateComment(comment *models.Comment) error
 	GetCommentByID(id, viewerID uuid.UUID) (*models.CommentWithAuthor, error)
 	ListCommentTreeByPost(postID, viewerID uuid.UUID, limit, offset int) ([]*models.CommentWithAuthor, error)
+	UpdateComment(comment *models.Comment) error
+	DeleteComment(id uuid.UUID, deletedAt time.Time) error
 }
 
 // PostAudienceRepository stores selected-follower audiences for private posts.
