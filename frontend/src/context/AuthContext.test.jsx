@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "./AuthContext";
 import { useAuth } from "./useAuth";
@@ -44,7 +44,9 @@ describe("AuthProvider", () => {
   });
 
   it("loads the current user and exposes an authenticated session", async () => {
-    apiFetch.mockResolvedValueOnce({ id: 1, username: "ada" });
+    apiFetch
+      .mockResolvedValueOnce({ id: 1, username: "ada" })
+      .mockResolvedValueOnce([]);
 
     render(
       <AuthProvider>
@@ -55,12 +57,17 @@ describe("AuthProvider", () => {
     expect(screen.getByText("Loading session")).toBeInTheDocument();
     expect(await screen.findByText("Signed in as ada")).toBeInTheDocument();
     expect(apiFetch).toHaveBeenCalledWith("/api/users/me");
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith("/api/notifications");
+    });
   });
 
   it("refreshes the current user and clears it after logout", async () => {
     apiFetch
       .mockResolvedValueOnce({ id: 1, username: "ada" })
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce({ id: 1, username: "grace" })
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce(null);
 
     render(
@@ -76,8 +83,9 @@ describe("AuthProvider", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Log out" }));
     expect(await screen.findByText("Signed out")).toBeInTheDocument();
-    expect(apiFetch).toHaveBeenNthCalledWith(2, "/api/users/me");
-    expect(apiFetch).toHaveBeenNthCalledWith(3, "/api/users/logout", {
+    expect(apiFetch).toHaveBeenNthCalledWith(2, "/api/notifications");
+    expect(apiFetch).toHaveBeenNthCalledWith(4, "/api/notifications");
+    expect(apiFetch).toHaveBeenNthCalledWith(5, "/api/users/logout", {
       method: "POST",
     });
   });
