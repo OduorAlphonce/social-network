@@ -114,6 +114,34 @@ func (r *sqliteCommentRepository) ListCommentTreeByPost(postID, viewerID uuid.UU
 	return comments, nil
 }
 
+func (r *sqliteCommentRepository) UpdateComment(comment *models.Comment) error {
+	query := `
+		UPDATE comments
+		SET content = ?, image_url = ?, updated_at = ?
+		WHERE id = ?`
+	_, err := r.db.Exec(
+		query,
+		comment.Content,
+		nullableStringArg(comment.ImageURL),
+		nullableTimeArg(comment.UpdatedAt),
+		comment.ID.String(),
+	)
+	return err
+}
+
+func (r *sqliteCommentRepository) DeleteComment(id uuid.UUID, deletedAt time.Time) error {
+	query := `
+		UPDATE comments
+		SET deleted_at = ?, content = '', image_url = NULL
+		WHERE id = ?`
+	_, err := r.db.Exec(
+		query,
+		deletedAt.Format(time.RFC3339),
+		id.String(),
+	)
+	return err
+}
+
 func commentSelectSQL(whereClause, suffix string) string {
 	return `
 		SELECT

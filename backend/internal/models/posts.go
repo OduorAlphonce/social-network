@@ -236,6 +236,13 @@ type UpdatePostRequest struct {
 	RemoveImage bool
 }
 
+// UpdateCommentRequest contains fields to edit an existing comment.
+type UpdateCommentRequest struct {
+	Content     *string
+	ImageURL    *string
+	RemoveImage bool
+}
+
 // CreateCommentRequest contains fields to write a new comment or reply.
 type CreateCommentRequest struct {
 	PostID          uuid.UUID
