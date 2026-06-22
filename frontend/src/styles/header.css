@@ -19,7 +19,7 @@
   flex-shrink: 0;
   cursor: pointer;
   transition: border-color var(--duration-fast) var(--ease-out-expo),
-              box-shadow var(--duration-fast) var(--ease-out-expo);
+    box-shadow var(--duration-fast) var(--ease-out-expo);
 }
 
 .profile-photo:hover {
@@ -46,8 +46,8 @@
   font-family: var(--font-body);
   font-size: var(--text-sm);
   transition: border-color var(--duration-fast) var(--ease-out-expo),
-              box-shadow var(--duration-fast) var(--ease-out-expo),
-              width var(--duration-base) var(--ease-out-expo);
+    box-shadow var(--duration-fast) var(--ease-out-expo),
+    width var(--duration-base) var(--ease-out-expo);
   outline: none;
 }
 
@@ -64,29 +64,65 @@
 
 /* Icons inside the header */
 .icons svg,
-.pretitle svg {
+.pretitle svg,
+.icon-button svg {
   color: var(--icon-inactive);
   cursor: pointer;
   transition: color var(--duration-fast) var(--ease-out-expo),
-              filter var(--duration-fast) var(--ease-out-expo);
+    filter var(--duration-fast) var(--ease-out-expo);
 }
 
 .icons svg:hover,
-.pretitle svg:hover {
+.pretitle svg:hover,
+.icon-button:hover svg {
   color: var(--hyperpop-violet);
   filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.5));
 }
 
+.icon-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.header-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(35%, -35%);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9999px;
+  background: var(--punch-pink);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-button:hover {
+  color: var(--hyperpop-violet);
+}
+
 /* Logo or platform name in pretitle */
-.pretitle > span,
-.pretitle > strong {
+.pretitle>span,
+.pretitle>strong {
   font-family: var(--font-display);
   font-size: var(--text-lg);
   color: var(--text-primary);
   letter-spacing: var(--tracking-wide);
 }
 
-.pretitle > span > span,
+.pretitle>span>span,
 .pretitle .accent {
   color: var(--acid-green);
 }

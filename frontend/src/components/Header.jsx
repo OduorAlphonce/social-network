@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router";
 import { IoArrowRedo } from "react-icons/io5";
 import "../styles/header.css";
 import { FaPlusCircle } from "react-icons/fa";
@@ -6,8 +7,12 @@ import { IoIosNotificationsOutline } from "react-icons/io";
 import { MdOutlineGroup } from "react-icons/md";
 import avatar from "../assets/user.svg";
 import LogoutButton from "./LogoutButton";
+import { useAuth } from "../context/useAuth";
 
 const Header = () => {
+  const navigate = useNavigate();
+  const { unreadNotifications } = useAuth();
+
   return (
     <div className="header">
       <div className="pretitle">
@@ -20,11 +25,49 @@ const Header = () => {
         />
       </div>
       <div className="icons">
-        <FaPlusCircle size={24} />
-        <AiOutlineMessage size={24} />
-        <IoIosNotificationsOutline size={24} />
-        <MdOutlineGroup size={24} />
-        <img src={avatar} className="profile-photo" />
+        <button
+          type="button"
+          className="icon-button"
+          title="Explore groups"
+          onClick={() => navigate("/groups")}
+        >
+          <FaPlusCircle size={24} />
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          title="Messages"
+          onClick={() => navigate("/messages")}
+        >
+          <AiOutlineMessage size={24} />
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          title="Notifications"
+          onClick={() => navigate("/notifications")}
+          aria-label="View notifications"
+        >
+          <IoIosNotificationsOutline size={24} />
+          {unreadNotifications > 0 && (
+            <span className="header-badge">{unreadNotifications}</span>
+          )}
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          title="Browse groups"
+          onClick={() => navigate("/groups")}
+        >
+          <MdOutlineGroup size={24} />
+        </button>
+        <img
+          src={avatar}
+          className="profile-photo"
+          alt="Your profile"
+          onClick={() => navigate("/profile")}
+          title="Your profile"
+        />
         <LogoutButton />
       </div>
     </div>

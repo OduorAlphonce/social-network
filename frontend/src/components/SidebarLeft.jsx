@@ -3,16 +3,19 @@ import { AiOutlineMessage } from "react-icons/ai";
 import { IoIosNotificationsOutline } from "react-icons/io";
 import { BiGroup, BiHome, BiUser } from "react-icons/bi";
 import { useNavigate } from "react-router";
+import { useAuth } from "../context/useAuth";
 
 const SidebarLeft = () => {
   const navigate = useNavigate();
+  const { unreadNotifications } = useAuth();
+
   return (
     <aside className="sidebar">
       <ul>
-        <li className="links" onClick={() => navigate("/")}>
+        <li className="links" onClick={() => navigate("/")}> 
           <BiHome /> Home
         </li>
-        <li className="links" onClick={() => navigate("/profile")}>
+        <li className="links" onClick={() => navigate("/profile")}> 
           <BiUser /> Profile
         </li>
         <li className="links" onClick={() => navigate("/friends")}>
@@ -29,7 +32,10 @@ const SidebarLeft = () => {
         </li>
         <li className="links" onClick={() => navigate("/notifications")}>
           <IoIosNotificationsOutline />
-          Notification
+          Notifications
+          {unreadNotifications > 0 && (
+            <span className="sidebar-badge">{unreadNotifications}</span>
+          )}
         </li>
         <li className="links" onClick={() => navigate("/events")}>
           <MdOutlineEvent />
