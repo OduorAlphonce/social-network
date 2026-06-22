@@ -17,6 +17,7 @@ type UserService interface {
 	Logout(sessionID string) error
 	Authenticate(sessionID string) (*models.User, error)
 	GetByID(id uuid.UUID) (*models.User, error)
+	ListPublicUsers(query string, excludeID uuid.UUID) ([]*models.User, error)
 	Update(userID uuid.UUID, req *models.UpdateUserRequest) (*models.UserResponse, error)
 }
 
@@ -168,6 +169,10 @@ func (s *userService) Authenticate(sessionID string) (*models.User, error) {
 
 func (s *userService) GetByID(id uuid.UUID) (*models.User, error) {
 	return s.userRepo.GetUserByID(id)
+}
+
+func (s *userService) ListPublicUsers(query string, excludeID uuid.UUID) ([]*models.User, error) {
+	return s.userRepo.ListPublicUsers(query, excludeID)
 }
 
 func (s *userService) Update(userID uuid.UUID, req *models.UpdateUserRequest) (*models.UserResponse, error) {
