@@ -15,6 +15,7 @@ type FollowerService interface {
 	RejectFollow(followerID, followingID uuid.UUID) error
 	GetFollowers(userID uuid.UUID) ([]*models.User, error)
 	GetFollowing(userID uuid.UUID) ([]*models.User, error)
+	GetPendingFollowers(userID uuid.UUID) ([]*models.User, error)
 	GetFollowStatus(followerID, followingID uuid.UUID) (string, error)
 }
 
@@ -97,6 +98,10 @@ func (s *followerService) GetFollowers(userID uuid.UUID) ([]*models.User, error)
 
 func (s *followerService) GetFollowing(userID uuid.UUID) ([]*models.User, error) {
 	return s.followerRepo.GetFollowing(userID)
+}
+
+func (s *followerService) GetPendingFollowers(userID uuid.UUID) ([]*models.User, error) {
+	return s.followerRepo.GetPendingFollowers(userID)
 }
 
 func (s *followerService) GetFollowStatus(followerID, followingID uuid.UUID) (string, error) {
