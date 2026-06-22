@@ -72,6 +72,16 @@ func RegisterRoutes(
 		}
 	})))
 
+	mux.Handle("/api/comments/{id}", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPatch {
+			postHandler.UpdateComment(w, r)
+		} else if r.Method == http.MethodDelete {
+			postHandler.DeleteComment(w, r)
+		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})))
+
 	// Groups routes
 	mux.Handle("/api/groups", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
