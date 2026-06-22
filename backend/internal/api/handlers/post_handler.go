@@ -619,3 +619,132 @@ func parseOptionalInt(value string) (int, error) {
 func isNotFoundError(err error) bool {
 	return strings.Contains(strings.ToLower(err.Error()), "not found")
 }
+
+func (h *PostHandler) UpdateComment(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
+		return
+	}
+
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "multipart/form-data") {
+		_ = utils.SendError(w, http.StatusBadRequest, "Content-Type must be multipart/form-data", nil)
+		return
+	}
+
+	err := r.ParseMultipartForm(10 << 20)
+	if err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, "Failed to parse multipart form", nil)
+		return
+	}
+
+	currentUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	commentIDStr := r.PathValue("id")
+	if _, err := uuid.FromString(commentIDStr); err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, "shared_validation_error: malformed id", nil)
+		return
+	}
+
+	var contentPtr *string
+	if r.MultipartForm != nil {
+		if vals, ok := r.MultipartForm.Value["content"]; ok && len(vals) > 0 {
+			val := vals[0]
+			contentPtr = &val
+		}
+	}
+
+	removeImage := false
+	if r.MultipartForm != nil {
+		if vals, ok := r.MultipartForm.Value["remove_image"]; ok && len(vals) > 0 {
+			removeImage, _ = strconv.ParseBool(vals[0])
+		}
+	}
+
+	imageFile, _, err := r.FormFile("image")
+	hasImage := err == nil
+	if hasImage {
+		defer imageFile.Close()
+	}
+
+	var savedImagePath *string
+	var success bool
+	defer func() {
+		if !success && savedImagePath != nil {
+			_ = utils.DeleteImage(*savedImagePath)
+		}
+	}()
+
+	if hasImage {
+		path, err := utils.SaveImage(imageFile, "/uploads/posts/")
+		if err != nil {
+			_ = utils.SendError(w, http.StatusBadRequest, "Failed to save image", map[string]string{"image": err.Error()})
+			return
+		}
+		savedImagePath = &path
+	}
+
+	req := &models.UpdateCommentRequest{
+		Content:     contentPtr,
+		ImageURL:    savedImagePath,
+		RemoveImage: removeImage,
+	}
+
+	response, err := h.postService.UpdateComment(r.Context(), commentIDStr, req, currentUser.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrCommentNotFound):
+			_ = utils.SendError(w, http.StatusNotFound, "Comment not found", nil)
+		case errors.Is(err, services.ErrForbidden):
+			_ = utils.SendError(w, http.StatusForbidden, "Forbidden: you do not have permission to edit this comment", nil)
+		case errors.Is(err, services.ErrPostOrCommentDeleted):
+			_ = utils.SendError(w, http.StatusConflict, "Post or comment is deleted", nil)
+		case errors.Is(err, services.ErrPostNotFound):
+			_ = utils.SendError(w, http.StatusNotFound, "Post not found", nil)
+		default:
+			_ = utils.SendError(w, http.StatusBadRequest, err.Error(), nil)
+		}
+		return
+	}
+
+	success = true
+	_ = utils.SendSuccess(w, http.StatusOK, "Comment updated successfully", response)
+}
+
+func (h *PostHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
+		return
+	}
+
+	currentUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	commentIDStr := r.PathValue("id")
+	if _, err := uuid.FromString(commentIDStr); err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, "shared_validation_error: malformed id", nil)
+		return
+	}
+
+	response, err := h.postService.DeleteComment(r.Context(), commentIDStr, currentUser.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrCommentNotFound):
+			_ = utils.SendError(w, http.StatusNotFound, "Comment not found", nil)
+		case errors.Is(err, services.ErrForbidden):
+			_ = utils.SendError(w, http.StatusForbidden, "Forbidden: you do not have permission to delete this comment", nil)
+		default:
+			_ = utils.SendError(w, http.StatusInternalServerError, "Internal server error", nil)
+		}
+		return
+	}
+
+	_ = utils.SendSuccess(w, http.StatusOK, "Comment deleted successfully", response)
+}
