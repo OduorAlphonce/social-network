@@ -557,3 +557,63 @@ func TestPostRepositoryDeletePost(t *testing.T) {
 		t.Fatalf("image_url = %v, want nil", deletedRow.Post.ImageURL)
 	}
 }
+
+func TestCommentRepositoryUpdateComment(t *testing.T) {
+	db := newPostCommentTestDB(t)
+	ids := seedPostCommentTestRows(t, db)
+
+	repo := NewCommentRepository(db)
+	commentRow, err := repo.GetCommentByID(ids.parentCommentID, ids.viewerID)
+	if err != nil {
+		t.Fatalf("GetCommentByID failed: %v", err)
+	}
+
+	comment := commentRow.Comment
+	comment.Content = "Updated comment content"
+	now := time.Now()
+	comment.UpdatedAt = &now
+
+	err = repo.UpdateComment(&comment)
+	if err != nil {
+		t.Fatalf("UpdateComment failed: %v", err)
+	}
+
+	updatedRow, err := repo.GetCommentByID(ids.parentCommentID, ids.viewerID)
+	if err != nil {
+		t.Fatalf("failed to fetch updated comment: %v", err)
+	}
+
+	if updatedRow.Comment.Content != "Updated comment content" {
+		t.Fatalf("content = %q, want %q", updatedRow.Comment.Content, "Updated comment content")
+	}
+	if updatedRow.Comment.UpdatedAt == nil {
+		t.Fatal("expected updated_at to be set")
+	}
+}
+
+func TestCommentRepositoryDeleteComment(t *testing.T) {
+	db := newPostCommentTestDB(t)
+	ids := seedPostCommentTestRows(t, db)
+
+	repo := NewCommentRepository(db)
+	now := time.Now()
+	err := repo.DeleteComment(ids.parentCommentID, now)
+	if err != nil {
+		t.Fatalf("DeleteComment failed: %v", err)
+	}
+
+	deletedRow, err := repo.GetCommentByID(ids.parentCommentID, ids.viewerID)
+	if err != nil {
+		t.Fatalf("GetCommentByID failed after deletion: %v", err)
+	}
+
+	if deletedRow.Comment.DeletedAt == nil {
+		t.Fatal("expected deleted_at to be set")
+	}
+	if deletedRow.Comment.Content != "" {
+		t.Fatalf("content = %q, want empty", deletedRow.Comment.Content)
+	}
+	if deletedRow.Comment.ImageURL != nil {
+		t.Fatalf("image_url = %v, want nil", deletedRow.Comment.ImageURL)
+	}
+}

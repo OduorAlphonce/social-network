@@ -109,6 +109,8 @@ type fakePostService struct {
 	createCommentResponse models.CommentResponse
 	updateResponse        models.PostResponse
 	deleteResponse        models.PostResponse
+	updateCommentResponse models.CommentResponse
+	deleteCommentResponse models.CommentResponse
 	homeErr               error
 	profileErr            error
 	groupErr              error
@@ -117,6 +119,8 @@ type fakePostService struct {
 	createCommentErr      error
 	updateErr             error
 	deleteErr             error
+	updateCommentErr      error
+	deleteCommentErr      error
 }
 
 func (s *fakePostService) CreatePost(ctx context.Context, req *models.CreatePostRequest, authorID uuid.UUID) (models.PostResponse, error) {
@@ -156,6 +160,20 @@ func (s *fakePostService) DeletePost(ctx context.Context, postID string, authorI
 		return nil, s.deleteErr
 	}
 	return s.deleteResponse, nil
+}
+
+func (s *fakePostService) UpdateComment(ctx context.Context, commentID string, req *models.UpdateCommentRequest, authorID uuid.UUID) (models.CommentResponse, error) {
+	if s.updateCommentErr != nil {
+		return nil, s.updateCommentErr
+	}
+	return s.updateCommentResponse, nil
+}
+
+func (s *fakePostService) DeleteComment(ctx context.Context, commentID string, authorID uuid.UUID) (models.CommentResponse, error) {
+	if s.deleteCommentErr != nil {
+		return nil, s.deleteCommentErr
+	}
+	return s.deleteCommentResponse, nil
 }
 
 func (s *fakePostService) GetHomeFeed(viewerID uuid.UUID, limit, offset int) (*models.PostListResponse, error) {
@@ -719,6 +737,78 @@ func TestPostHandlerDeletePost(t *testing.T) {
 
 		if recorder.Code != http.StatusForbidden {
 			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusForbidden)
+		}
+	})
+}
+
+func TestPostHandlerUpdateComment(t *testing.T) {
+	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000002"))
+	commentID := uuid.Must(uuid.FromString("11111111-0000-0000-0000-000000000001"))
+
+	t.Run("UpdateComment success", func(t *testing.T) {
+		service := &fakePostService{
+			updateCommentResponse: &models.ActiveCommentResponse{
+				ID:      commentID,
+				Content: "Updated content",
+			},
+		}
+		handler := NewPostHandler(service)
+
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		_ = writer.WriteField("content", "Updated content")
+		_ = writer.Close()
+
+		request := httptest.NewRequest(http.MethodPatch, "/api/comments/"+commentID.String(), body)
+		request.Header.Set("Content-Type", writer.FormDataContentType())
+
+		user := &models.User{ID: viewerID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+		request.SetPathValue("id", commentID.String())
+
+		recorder := httptest.NewRecorder()
+		handler.UpdateComment(recorder, request)
+
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
+		}
+	})
+
+	t.Run("UpdateComment not allowed method returns 405", func(t *testing.T) {
+		handler := NewPostHandler(&fakePostService{})
+		request := httptest.NewRequest(http.MethodPost, "/api/comments/"+commentID.String(), nil)
+		recorder := httptest.NewRecorder()
+		handler.UpdateComment(recorder, request)
+
+		if recorder.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusMethodNotAllowed)
+		}
+	})
+}
+
+func TestPostHandlerDeleteComment(t *testing.T) {
+	viewerID := uuid.Must(uuid.FromString("10000000-0000-0000-0000-000000000002"))
+	commentID := uuid.Must(uuid.FromString("11111111-0000-0000-0000-000000000001"))
+
+	t.Run("DeleteComment success", func(t *testing.T) {
+		service := &fakePostService{
+			deleteCommentResponse: &models.DeletedCommentResponse{
+				ID:      commentID,
+				Deleted: true,
+			},
+		}
+		handler := NewPostHandler(service)
+
+		request := httptest.NewRequest(http.MethodDelete, "/api/comments/"+commentID.String(), nil)
+		user := &models.User{ID: viewerID, Email: "viewer@example.com"}
+		request = request.WithContext(context.WithValue(request.Context(), middleware.UserContextKey, user))
+		request.SetPathValue("id", commentID.String())
+
+		recorder := httptest.NewRecorder()
+		handler.DeleteComment(recorder, request)
+
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
 		}
 	})
 }
