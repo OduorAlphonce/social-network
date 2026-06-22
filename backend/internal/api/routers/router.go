@@ -48,7 +48,6 @@ func Router(database *sql.DB) http.Handler {
 	notificationHandler := handlers.NewNotificationHandler(notificationService)
 	authMiddleware := middleware.Auth(userService)
 
-
 	// Initialize ServeMux
 	mux := http.NewServeMux()
 
@@ -71,6 +70,7 @@ func Router(database *sql.DB) http.Handler {
 	// Authenticated routes
 	// user & follower routes
 	mux.Handle("/api/users/me", http.HandlerFunc(userHandler.Me))
+	mux.Handle("/api/users/search", authMiddleware(http.HandlerFunc(userHandler.SearchPublicUsers)))
 	mux.Handle("/api/users/update", http.HandlerFunc(userHandler.Update))
 	mux.HandleFunc("/api/users/logout", userHandler.Logout)
 
@@ -80,6 +80,7 @@ func Router(database *sql.DB) http.Handler {
 	mux.Handle("/api/followers/reject", authMiddleware(http.HandlerFunc(followerHandler.RejectFollow)))
 	mux.Handle("/api/followers/followers", authMiddleware(http.HandlerFunc(followerHandler.GetFollowers)))
 	mux.Handle("/api/followers/following", authMiddleware(http.HandlerFunc(followerHandler.GetFollowing)))
+	mux.Handle("/api/followers/pending", authMiddleware(http.HandlerFunc(followerHandler.GetPendingFollowers)))
 	mux.Handle("/api/posts", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			postHandler.CreatePost(w, r)
@@ -150,4 +151,3 @@ func Router(database *sql.DB) http.Handler {
 
 	return middleware.CorsMiddleware(mux)
 }
-
