@@ -279,6 +279,43 @@ func (h *FollowerHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	_ = utils.SendSuccess(w, http.StatusOK, "Following retrieved successfully", response)
 }
 
+func (h *FollowerHandler) GetPendingFollowers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		_ = utils.SendError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
+		return
+	}
+
+	currentUser, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	followers, err := h.followerService.GetPendingFollowers(currentUser.ID)
+	if err != nil {
+		_ = utils.SendError(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	var response []*models.UserResponse
+	for _, f := range followers {
+		response = append(response, &models.UserResponse{
+			ID:          f.ID,
+			Email:       f.Email,
+			FirstName:   f.FirstName,
+			LastName:    f.LastName,
+			DateOfBirth: f.DOB.Format("2006-01-02"),
+			Avatar:      f.Avatar,
+			Nickname:    f.Nickname,
+			AboutMe:     f.AboutMe,
+			IsPublic:    f.IsPublic,
+			CreatedAt:   f.CreatedAt,
+		})
+	}
+
+	_ = utils.SendSuccess(w, http.StatusOK, "Pending follow requests retrieved successfully", response)
+}
+
 func (h *FollowerHandler) verifyAccess(currentUserID, targetUserID uuid.UUID) error {
 	targetUser, err := h.userService.GetByID(targetUserID)
 	if err != nil {
