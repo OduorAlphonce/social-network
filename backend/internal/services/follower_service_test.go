@@ -163,6 +163,10 @@ func (r *fakeFollowersRepository) GetFollowing(userID uuid.UUID) ([]*models.User
 	return []*models.User{}, nil
 }
 
+func (r *fakeFollowersRepository) GetPendingFollowers(userID uuid.UUID) ([]*models.User, error) {
+	return []*models.User{}, nil
+}
+
 func (r *fakeFollowersRepository) GetStatus(followerID, followeeID uuid.UUID) (models.Status, error) {
 	status, exists := r.status[followerKey{followerID: followerID, followeeID: followeeID}]
 	if !exists {
