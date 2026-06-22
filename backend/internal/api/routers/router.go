@@ -1,29 +1,54 @@
 package routers
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
 
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/handlers"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/middleware"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/repositories"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
 )
 
 // RegisterRoutes configures the application's HTTP ServeMux.
 // It maps URL paths to their corresponding handler functions, sets up static file serving for uploads,
 // and wraps the router with necessary middleware like CORS and authentication.
 // Note that all registered application endpoints fall under the "/api/" path.
-func RegisterRoutes(
-	userHandler *handlers.UserHandler,
-	followerHandler *handlers.FollowerHandler,
-	postHandler *handlers.PostHandler,
-	groupHandler *handlers.GroupHandler,
-	eventHandler *handlers.EventHandler,
-	chatHandler *handlers.ChatHandler,
-	notificationHandler *handlers.NotificationHandler,
-	authMiddleware func(http.Handler) http.Handler,
-	allowedOrigin string,
-) http.Handler {
+func Router(database *sql.DB) http.Handler {
+	// initailize repos
+	userRepo := repositories.NewUserRepository(database)
+	sessionRepo := repositories.NewSessionRepository(database)
+	followerRepo := repositories.NewFollowerRepository(database)
+	postRepo := repositories.NewPostRepository(database)
+	groupMembershipRepo := repositories.NewGroupMembershipRepository(database)
+	groupRepo := repositories.NewGroupRepository(database)
+	eventRepo := repositories.NewEventRepository(database)
+	messageRepo := repositories.NewMessageRepository(database)
+	notificationRepo := repositories.NewNotificationRepository(database)
+	commentRepo := repositories.NewCommentRepository(database)
+
+	//initialize services
+	userService := services.NewUserService(userRepo, sessionRepo)
+	followerService := services.NewFollowerService(followerRepo, userRepo)
+	notificationService := services.NewNotificationService(notificationRepo, userRepo, groupRepo, eventRepo)
+	groupService := services.NewGroupService(groupRepo, groupMembershipRepo, userRepo, notificationService)
+	eventService := services.NewEventService(eventRepo, groupMembershipRepo, notificationService)
+	chatService := services.NewChatService(messageRepo, followerRepo, groupMembershipRepo, userRepo, groupRepo, notificationService)
+	postService := services.NewPostService(postRepo, userRepo, followerRepo, groupMembershipRepo, commentRepo)
+
+	// initialize handlers
+	userHandler := handlers.NewUserHandler(userService)
+	followerHandler := handlers.NewFollowerHandler(followerService, userService)
+	postHandler := handlers.NewPostHandler(postService)
+	groupHandler := handlers.NewGroupHandler(groupService)
+	eventHandler := handlers.NewEventHandler(eventService)
+	chatHandler := handlers.NewChatHandler(chatService)
+	notificationHandler := handlers.NewNotificationHandler(notificationService)
+	authMiddleware := middleware.Auth(userService)
+
+
 	// Initialize ServeMux
 	mux := http.NewServeMux()
 
@@ -44,6 +69,7 @@ func RegisterRoutes(
 	mux.HandleFunc("/api/users/login", userHandler.Login)
 
 	// Authenticated routes
+	// user & follower routes
 	mux.Handle("/api/users/me", http.HandlerFunc(userHandler.Me))
 	mux.Handle("/api/users/update", http.HandlerFunc(userHandler.Update))
 	mux.HandleFunc("/api/users/logout", userHandler.Logout)
