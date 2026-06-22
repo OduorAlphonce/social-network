@@ -113,6 +113,15 @@ func (s *groupService) RequestJoin(groupID, userID uuid.UUID) error {
 		return err
 	}
 
+	if status == "accepted" {
+		return errors.New("membership relationship already exists")
+	}
+
+	if status == "pending_invite" {
+		// Accept a pending invite when the invited user chooses to join.
+		return s.membershipRepo.UpdateMembershipStatus(groupID, userID, "accepted")
+	}
+
 	if status != "none" {
 		return errors.New("membership relationship already exists")
 	}

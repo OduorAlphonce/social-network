@@ -20,14 +20,16 @@ type FollowerService interface {
 }
 
 type followerService struct {
-	followerRepo repositories.FollowersRepository
-	userRepo     repositories.UserRepository
+	followerRepo     repositories.FollowersRepository
+	userRepo         repositories.UserRepository
+	notificationServ NotificationService
 }
 
-func NewFollowerService(fr repositories.FollowersRepository, ur repositories.UserRepository) FollowerService {
+func NewFollowerService(fr repositories.FollowersRepository, ur repositories.UserRepository, ns NotificationService) FollowerService {
 	return &followerService{
-		followerRepo: fr,
-		userRepo:     ur,
+		followerRepo:     fr,
+		userRepo:         ur,
+		notificationServ: ns,
 	}
 }
 
@@ -61,6 +63,10 @@ func (s *followerService) Follow(followerID, followingID uuid.UUID) (string, err
 	err = s.followerRepo.Follow(followerID, followingID, newStatus)
 	if err != nil {
 		return "", err
+	}
+
+	if newStatus == models.Pending {
+		_ = s.notificationServ.CreateNotification(followingID, "follow_request", followerID)
 	}
 
 	return string(newStatus), nil

@@ -31,8 +31,8 @@ func Router(database *sql.DB) http.Handler {
 
 	//initialize services
 	userService := services.NewUserService(userRepo, sessionRepo)
-	followerService := services.NewFollowerService(followerRepo, userRepo)
 	notificationService := services.NewNotificationService(notificationRepo, userRepo, groupRepo, eventRepo)
+	followerService := services.NewFollowerService(followerRepo, userRepo, notificationService)
 	groupService := services.NewGroupService(groupRepo, groupMembershipRepo, userRepo, notificationService)
 	eventService := services.NewEventService(eventRepo, groupMembershipRepo, notificationService)
 	chatService := services.NewChatService(messageRepo, followerRepo, groupMembershipRepo, userRepo, groupRepo, notificationService)
