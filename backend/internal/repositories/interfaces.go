@@ -12,6 +12,7 @@ type UserRepository interface {
 	CreateUser(user *models.User) error
 	GetUserByID(id uuid.UUID) (*models.User, error)
 	GetUserByEmail(email string) (*models.User, error)
+	ListPublicUsers(query string, excludeID uuid.UUID) ([]*models.User, error)
 	UpdateUserProfile(user *models.User) error
 	DeleteUser(id uuid.UUID) error
 }
@@ -31,6 +32,7 @@ type FollowersRepository interface {
 	RejectFollower(followerID, followeeID uuid.UUID) error
 	GetFollowers(userID uuid.UUID) ([]*models.User, error)
 	GetFollowing(userID uuid.UUID) ([]*models.User, error)
+	GetPendingFollowers(userID uuid.UUID) ([]*models.User, error)
 	GetStatus(followerID, followeeID uuid.UUID) (models.Status, error)
 }
 
@@ -124,4 +126,3 @@ type NotificationRepository interface {
 	MarkAsRead(id uuid.UUID) error
 	MarkAllAsRead(userID uuid.UUID) error
 }
-

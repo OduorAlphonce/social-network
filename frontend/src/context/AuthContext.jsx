@@ -11,6 +11,28 @@ import { AuthContext } from "./auth-context";
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  const refreshUnreadNotifications = useCallback(async () => {
+    try {
+      const notifications = await apiFetch("/api/notifications");
+      const unreadCount = Array.isArray(notifications)
+        ? notifications.filter((notification) => !notification.is_read).length
+        : 0;
+
+      setUnreadNotifications(unreadCount);
+      return unreadCount;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        setUnreadNotifications(0);
+        return 0;
+      }
+
+      console.error("Failed to refresh notifications", error);
+      setUnreadNotifications(0);
+      return 0;
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -18,9 +40,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const user = await apiFetch("/api/users/me");
       setCurrentUser(user);
+      await refreshUnreadNotifications();
       return user;
     } catch (error) {
       setCurrentUser(null);
+      setUnreadNotifications(0);
 
       if (error instanceof ApiError && error.status === 401) {
         return null;
@@ -30,7 +54,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [refreshUnreadNotifications]);
 
   const login = useCallback(
     async (credentials) => {
@@ -57,6 +81,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await apiFetch("/api/users/logout", { method: "POST" });
       setCurrentUser(null);
+      setUnreadNotifications(0);
     } finally {
       setIsLoading(false);
     }
@@ -71,10 +96,12 @@ export const AuthProvider = ({ children }) => {
 
         if (isActive) {
           setCurrentUser(user);
+          await refreshUnreadNotifications(user);
         }
       } catch {
         if (isActive) {
           setCurrentUser(null);
+          setUnreadNotifications(0);
         }
       } finally {
         if (isActive) {
@@ -88,18 +115,28 @@ export const AuthProvider = ({ children }) => {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [refreshUnreadNotifications]);
 
   const value = useMemo(
     () => ({
       currentUser,
       isAuthenticated: currentUser !== null,
       isLoading,
+      unreadNotifications,
+      refreshUnreadNotifications,
       login,
       logout,
       refresh,
     }),
-    [currentUser, isLoading, login, logout, refresh]
+    [
+      currentUser,
+      isLoading,
+      unreadNotifications,
+      login,
+      logout,
+      refresh,
+      refreshUnreadNotifications,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

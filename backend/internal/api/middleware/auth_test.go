@@ -107,6 +107,10 @@ func (s *fakeAuthUserService) GetByID(id uuid.UUID) (*models.User, error) {
 	return nil, nil
 }
 
+func (s *fakeAuthUserService) ListPublicUsers(query string, excludeID uuid.UUID) ([]*models.User, error) {
+	return nil, nil
+}
+
 func (s *fakeAuthUserService) Update(userID uuid.UUID, req *models.UpdateUserRequest) (*models.UserResponse, error) {
 	return &models.UserResponse{ID: userID, CreatedAt: time.Now()}, nil
 }

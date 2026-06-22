@@ -11,7 +11,8 @@ import (
 func TestFollowerServicePublicProfileAutoAcceptsFollow(t *testing.T) {
 	users := newFakeUserRepository()
 	followers := newFakeFollowersRepository()
-	service := NewFollowerService(followers, users)
+	notifications := &fakeNotificationServiceForFollower{}
+	service := NewFollowerService(followers, users, notifications)
 	followerID, targetID := followerTestIDs()
 	users.add(&models.User{ID: targetID, Email: "public@example.com", IsPublic: true})
 
@@ -30,7 +31,8 @@ func TestFollowerServicePublicProfileAutoAcceptsFollow(t *testing.T) {
 func TestFollowerServicePrivateProfileCreatesPendingRequest(t *testing.T) {
 	users := newFakeUserRepository()
 	followers := newFakeFollowersRepository()
-	service := NewFollowerService(followers, users)
+	notifications := &fakeNotificationServiceForFollower{}
+	service := NewFollowerService(followers, users, notifications)
 	followerID, targetID := followerTestIDs()
 	users.add(&models.User{ID: targetID, Email: "private@example.com", IsPublic: false})
 
@@ -45,7 +47,8 @@ func TestFollowerServicePrivateProfileCreatesPendingRequest(t *testing.T) {
 
 func TestFollowerServiceRejectsSelfFollow(t *testing.T) {
 	users := newFakeUserRepository()
-	service := NewFollowerService(newFakeFollowersRepository(), users)
+	notifications := &fakeNotificationServiceForFollower{}
+	service := NewFollowerService(newFakeFollowersRepository(), users, notifications)
 	userID := uuid.Must(uuid.FromString("6f5d9a18-5c4f-4b7a-9e9a-7a5d2efc44b1"))
 	users.add(&models.User{ID: userID, Email: "amina@example.com", IsPublic: true})
 
@@ -57,7 +60,8 @@ func TestFollowerServiceRejectsSelfFollow(t *testing.T) {
 func TestFollowerServiceAcceptAndRejectRequirePendingRequests(t *testing.T) {
 	users := newFakeUserRepository()
 	followers := newFakeFollowersRepository()
-	service := NewFollowerService(followers, users)
+	notifications := &fakeNotificationServiceForFollower{}
+	service := NewFollowerService(followers, users, notifications)
 	followerID, targetID := followerTestIDs()
 	users.add(&models.User{ID: targetID, Email: "private@example.com", IsPublic: false})
 
@@ -86,7 +90,8 @@ func TestFollowerServiceAcceptAndRejectRequirePendingRequests(t *testing.T) {
 func TestFollowerServiceRejectFollowRemovesPendingRequest(t *testing.T) {
 	users := newFakeUserRepository()
 	followers := newFakeFollowersRepository()
-	service := NewFollowerService(followers, users)
+	notifications := &fakeNotificationServiceForFollower{}
+	service := NewFollowerService(followers, users, notifications)
 	followerID, targetID := followerTestIDs()
 	users.add(&models.User{ID: targetID, Email: "private@example.com", IsPublic: false})
 
@@ -163,10 +168,38 @@ func (r *fakeFollowersRepository) GetFollowing(userID uuid.UUID) ([]*models.User
 	return []*models.User{}, nil
 }
 
+func (r *fakeFollowersRepository) GetPendingFollowers(userID uuid.UUID) ([]*models.User, error) {
+	return []*models.User{}, nil
+}
+
 func (r *fakeFollowersRepository) GetStatus(followerID, followeeID uuid.UUID) (models.Status, error) {
 	status, exists := r.status[followerKey{followerID: followerID, followeeID: followeeID}]
 	if !exists {
 		return "none", nil
 	}
 	return status, nil
+}
+
+type fakeNotificationServiceForFollower struct {
+	createdCount int
+	lastUserID   uuid.UUID
+	lastType     string
+	lastSourceID uuid.UUID
+}
+
+func (s *fakeNotificationServiceForFollower) CreateNotification(userID uuid.UUID, nType string, sourceID uuid.UUID) error {
+	s.createdCount++
+	s.lastUserID = userID
+	s.lastType = nType
+	s.lastSourceID = sourceID
+	return nil
+}
+
+func (s *fakeNotificationServiceForFollower) GetNotifications(userID uuid.UUID) ([]*models.NotificationResponse, error) {
+	return nil, nil
+}
+
+func (s *fakeNotificationServiceForFollower) MarkAsRead(id, userID uuid.UUID) error { return nil }
+func (s *fakeNotificationServiceForFollower) MarkAllAsRead(userID uuid.UUID) error  { return nil }
+func (s *fakeNotificationServiceForFollower) RegisterPushHandler(handler func(userID uuid.UUID, payload any)) {
 }

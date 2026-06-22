@@ -130,28 +130,31 @@ func TestFollowerHandlerGetFollowingForPrivateProfileRequiresAcceptedFollow(t *t
 }
 
 type handlerFakeFollowerService struct {
-	followers               []*models.User
-	following               []*models.User
-	followStatus            string
-	followErr               error
-	unfollowErr             error
-	acceptErr               error
-	rejectErr               error
-	getFollowersErr         error
-	getFollowingErr         error
-	statusErr               error
-	lastFollowFollowerID    uuid.UUID
-	lastFollowFollowingID   uuid.UUID
-	lastUnfollowFollowerID  uuid.UUID
-	lastUnfollowFollowingID uuid.UUID
-	lastAcceptFollowerID    uuid.UUID
-	lastAcceptFollowingID   uuid.UUID
-	lastRejectFollowerID    uuid.UUID
-	lastRejectFollowingID   uuid.UUID
-	lastGetFollowersID      uuid.UUID
-	lastGetFollowingID      uuid.UUID
-	lastStatusFollowerID    uuid.UUID
-	lastStatusFollowingID   uuid.UUID
+	followers                 []*models.User
+	following                 []*models.User
+	pendingFollowers          []*models.User
+	followStatus              string
+	followErr                 error
+	unfollowErr               error
+	acceptErr                 error
+	rejectErr                 error
+	getFollowersErr           error
+	getFollowingErr           error
+	getPendingFollowersErr    error
+	statusErr                 error
+	lastFollowFollowerID      uuid.UUID
+	lastFollowFollowingID     uuid.UUID
+	lastUnfollowFollowerID    uuid.UUID
+	lastUnfollowFollowingID   uuid.UUID
+	lastAcceptFollowerID      uuid.UUID
+	lastAcceptFollowingID     uuid.UUID
+	lastRejectFollowerID      uuid.UUID
+	lastRejectFollowingID     uuid.UUID
+	lastGetFollowersID        uuid.UUID
+	lastGetFollowingID        uuid.UUID
+	lastGetPendingFollowersID uuid.UUID
+	lastStatusFollowerID      uuid.UUID
+	lastStatusFollowingID     uuid.UUID
 }
 
 func (s *handlerFakeFollowerService) Follow(followerID, followingID uuid.UUID) (string, error) {
@@ -195,6 +198,14 @@ func (s *handlerFakeFollowerService) GetFollowing(userID uuid.UUID) ([]*models.U
 		return nil, s.getFollowingErr
 	}
 	return s.following, nil
+}
+
+func (s *handlerFakeFollowerService) GetPendingFollowers(userID uuid.UUID) ([]*models.User, error) {
+	s.lastGetPendingFollowersID = userID
+	if s.getPendingFollowersErr != nil {
+		return nil, s.getPendingFollowersErr
+	}
+	return s.pendingFollowers, nil
 }
 
 func (s *handlerFakeFollowerService) GetFollowStatus(followerID, followingID uuid.UUID) (string, error) {

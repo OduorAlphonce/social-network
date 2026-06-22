@@ -229,6 +229,10 @@ func (s *handlerFakeUserService) GetByID(id uuid.UUID) (*models.User, error) {
 	return s.getByIDUser, nil
 }
 
+func (s *handlerFakeUserService) ListPublicUsers(query string, excludeID uuid.UUID) ([]*models.User, error) {
+	return nil, nil
+}
+
 func (s *handlerFakeUserService) Update(userID uuid.UUID, req *models.UpdateUserRequest) (*models.UserResponse, error) {
 	s.lastUpdateUserID = userID
 	s.lastUpdateRequest = req
