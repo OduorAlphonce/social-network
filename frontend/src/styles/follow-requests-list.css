@@ -1,0 +1,39 @@
+.follow-requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.follow-requests-list__skeleton {
+  height: 72px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 12px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.follow-requests-list__error {
+  color: var(--punch-pink);
+  text-align: center;
+  padding: 20px;
+}
+
+.follow-requests-list__empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px;
+}
