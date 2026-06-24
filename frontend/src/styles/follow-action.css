@@ -1,0 +1,65 @@
+.follow-action__btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  min-width: 100px;
+}
+
+.follow-action--follow {
+  background: var(--hyperpop-violet);
+  color: white;
+}
+
+.follow-action--follow:hover {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+.follow-action--following {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--text-muted);
+}
+
+.follow-action--following:hover {
+  border-color: var(--punch-pink);
+  color: var(--punch-pink);
+}
+
+.follow-action--following:hover::after {
+  content: attr(data-hover-label);
+}
+
+.follow-action--following:hover .follow-action__btn-text {
+  display: none;
+}
+
+.follow-action--requested {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--text-muted);
+}
+
+.follow-action--requested:hover {
+  border-color: var(--punch-pink);
+  color: var(--punch-pink);
+}
+
+.follow-action--requested:hover::after {
+  content: attr(data-hover-label);
+}
+
+.follow-action__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.follow-action__error {
+  color: var(--punch-pink);
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
