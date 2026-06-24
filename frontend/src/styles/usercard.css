@@ -1,0 +1,79 @@
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.user-card:hover {
+  border-color: var(--hyperpop-violet);
+  box-shadow: var(--glow-violet);
+}
+
+.user-card__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background-color: var(--bg-surface);
+}
+
+.user-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-card__name {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.user-card__nickname {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.user-card__bio {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.user-card__badge {
+  margin-top: 4px;
+}
+
+.user-card__badge-public,
+.user-card__badge-private {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.user-card__badge-public {
+  background-color: rgba(204, 255, 0, 0.15);
+  color: var(--acid-green);
+}
+
+.user-card__badge-private {
+  background-color: rgba(255, 51, 102, 0.15);
+  color: var(--punch-pink);
+}
+
+.user-card__actions {
+  flex-shrink: 0;
+}
