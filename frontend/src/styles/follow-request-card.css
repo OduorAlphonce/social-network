@@ -1,0 +1,79 @@
+.follow-request-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.follow-request-card:hover {
+  border-color: var(--hyperpop-violet);
+}
+
+.follow-request-card__user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.follow-request-card__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.follow-request-card__name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.follow-request-card__nickname {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.follow-request-card__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.follow-request-card__accept,
+.follow-request-card__reject {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.follow-request-card__accept {
+  background: var(--hyperpop-violet);
+  color: white;
+}
+
+.follow-request-card__accept:hover {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+}
+
+.follow-request-card__reject {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--text-muted);
+}
+
+.follow-request-card__reject:hover {
+  border-color: var(--punch-pink);
+  color: var(--punch-pink);
+}
+
+.follow-request-card__accept:disabled,
+.follow-request-card__reject:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
