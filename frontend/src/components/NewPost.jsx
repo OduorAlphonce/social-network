@@ -23,7 +23,8 @@ export default function NewPost({ onCreate }) {
 
       const res = await fetch("/api/posts", {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        // send cookies (server uses session cookie) and let browser handle auth
+        credentials: "include",
         body: form,
       });
 
@@ -31,12 +32,14 @@ export default function NewPost({ onCreate }) {
         throw new Error(`Failed to create post (${res.status})`);
       }
 
-      const created = await res.json();
+      const json = await res.json();
+      // backend uses envelope: { status, message, data, errors }
+      const created = json && json.data ? json.data : null;
       setContent("");
       setFile(null);
       setPreview(null);
       setPrivacy("public");
-      if (typeof onCreate === "function") onCreate(created);
+      if (typeof onCreate === "function" && created) onCreate(created);
     } catch (err) {
       console.error(err);
     } finally {
