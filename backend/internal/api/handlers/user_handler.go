@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofrs/uuid/v5"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/middleware"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
@@ -146,6 +147,40 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 	user, err := h.userService.Authenticate(cookie.Value)
 	if err != nil {
 		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	_ = utils.SendSuccess(w, http.StatusOK, "User retrieved successfully", models.UserResponse{
+		ID:          user.ID,
+		Email:       user.Email,
+		FirstName:   user.FirstName,
+		LastName:    user.LastName,
+		DateOfBirth: user.DOB.Format("2006-01-02"),
+		Avatar:      user.Avatar,
+		Nickname:    user.Nickname,
+		AboutMe:     user.AboutMe,
+		IsPublic:    user.IsPublic,
+		CreatedAt:   user.CreatedAt,
+	})
+}
+
+func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	user, err := h.userService.Authenticate(cookie.Value)
+	if err != nil {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	userID := r.PathValue("id")
+
+	if _, err := uuid.FromString(userID); err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, "shared_validation_error: malformed id", nil)
 		return
 	}
 

@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router"
 import avatar from "../../assets/user.svg"
-import "../../styles/user-card.css"
+import "../../styles/usercard.css"
 
 const toDisplayName = (user) => `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.nickname || "user"
 
