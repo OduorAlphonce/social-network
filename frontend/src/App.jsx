@@ -33,6 +33,7 @@ function App() {
         {/* If not authenticated, display this page within <Layout/>*/}
         <Route path="/post/:id" element={<PostDetail />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/user/:userId" element={<Profile />} />
         <Route path="/friends" element={<Friends />} />
         <Route path="/events" element={<Events />} />
         <Route path="/groups" element={<Groups />} />

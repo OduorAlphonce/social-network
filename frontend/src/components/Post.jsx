@@ -80,10 +80,25 @@ const Post = ({ post }) => {
             src={post?.author?.avatar ? post.author.avatar : avatar}
             alt="avatar"
             className="profile-photo"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (post?.author?.id) {
+                navigate(`/user/${post.author.id}`)
+              }
+            }}
+            style={{cursor: "pointer"}}
           />
 
           <div className="post-bio">
-            <h5>{authorName}</h5>
+            <h5
+              onClick={(e) => {
+                e.stopPropagation()
+                if (post?.author?.id) {
+                  navigate(`/user/${post.author.id}`)
+                }
+              }}
+              style={{cursor: "pointer"}}
+            >{authorName}</h5>
             <small>{DateFormatter(post?.created_at, renderedAt)}</small>
           </div>
         </div>

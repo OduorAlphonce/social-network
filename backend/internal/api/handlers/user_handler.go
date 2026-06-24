@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/gofrs/uuid/v5"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/middleware"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
@@ -162,6 +164,42 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 		IsPublic:    user.IsPublic,
 		CreatedAt:   user.CreatedAt,
 	})
+}
+
+func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	_, err = h.userService.Authenticate(cookie.Value)
+	if err != nil {
+		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	userID := r.PathValue("id")
+
+	id, err := uuid.FromString(userID); if err != nil {
+		_ = utils.SendError(w, http.StatusBadRequest, "shared_validation_error: malformed id", nil)
+		return
+	}
+
+	payload, err := h.userService.GetByID(id)
+	if err != nil {
+		if errors.Is(err, services.ErrPostNotFound) {
+			_ = utils.SendError(w, http.StatusNotFound, "user not found", nil)
+			return
+		}
+		if errors.Is(err, services.ErrPostForbidden) {
+			_ = utils.SendError(w, http.StatusForbidden, "You do not have access to this post", nil)
+			return
+		}
+		_ = utils.SendError(w, http.StatusInternalServerError, "Internal server error", nil)
+		return
+	}
+	_ = utils.SendSuccess(w, http.StatusOK, "user retrieved successfully", payload)
 }
 
 func (h *UserHandler) SearchPublicUsers(w http.ResponseWriter, r *http.Request) {

@@ -76,6 +76,7 @@ func Router(database *sql.DB) http.Handler {
 	mux.Handle("/api/users/me", http.HandlerFunc(userHandler.Me))
 	mux.Handle("/api/users/search", authMiddleware(http.HandlerFunc(userHandler.SearchPublicUsers)))
 	mux.Handle("/api/users/update", http.HandlerFunc(userHandler.Update))
+	mux.Handle("/api/users/{id}", http.HandlerFunc(userHandler.GetUser))
 	mux.HandleFunc("/api/users/logout", userHandler.Logout)
 
 	mux.Handle("/api/followers/follow", authMiddleware(http.HandlerFunc(followerHandler.Follow)))
