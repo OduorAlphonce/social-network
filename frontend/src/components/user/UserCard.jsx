@@ -22,6 +22,9 @@ const UserCard = ({user, actions, onClick}) => {
                 <div className="user-card__name">{toDisplayName(user)}</div>
                 {user.nickname && <div className="user-card__nickname">@{user.nickname}</div>}
             </div>
+            {actions && <div className="user-card__actions">{actions}</div>}
         </div>
     )
 }
+
+export default UserCard
