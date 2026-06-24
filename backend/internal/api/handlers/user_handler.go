@@ -10,6 +10,7 @@ import (
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/api/middleware"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/models"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/services"
+	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/storage"
 	"learn.zone01kisumu.ke/git/qquinton/social-network/internal/utils"
 )
 
@@ -52,7 +53,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			defer file.Close()
 
-			req.Avatar, err = utils.SaveImage(file, "/uploads/avatars/")
+			req.Avatar, err = storage.SaveAvatar(file)
 			if err != nil {
 				utils.SendError(w, http.StatusInternalServerError, "Failed to save image", nil)
 				return
@@ -70,7 +71,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	userResponse, err := h.userService.Register(&req)
 	if err != nil {
 		if req.Avatar != "" {
-			_ = utils.DeleteImage(req.Avatar)
+			_ = storage.DeleteImage(req.Avatar)
 		}
 
 		_ = utils.SendError(w, http.StatusBadRequest, err.Error(), nil)
@@ -278,7 +279,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		file, _, err := r.FormFile("avatar")
 		if err == nil {
 			defer file.Close()
-			req.Avatar, err = utils.SaveImage(file, "/uploads/avatars/")
+			req.Avatar, err = storage.SaveAvatar(file)
 			if err != nil {
 				utils.SendError(w, http.StatusInternalServerError, "Failed to save image", nil)
 				return
@@ -294,6 +295,10 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	updatedUser, err := h.userService.Update(user.ID, &req)
 	if err != nil {
+		if req.Avatar != "" {
+			_ = storage.DeleteImage(req.Avatar)
+		}
+
 		_ = utils.SendError(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
