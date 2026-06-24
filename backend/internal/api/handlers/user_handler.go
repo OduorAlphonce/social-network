@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -171,7 +172,7 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.userService.Authenticate(cookie.Value)
+	_, err = h.userService.Authenticate(cookie.Value)
 	if err != nil {
 		_ = utils.SendError(w, http.StatusUnauthorized, "Unauthorized", nil)
 		return
@@ -179,23 +180,25 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	userID := r.PathValue("id")
 
-	if _, err := uuid.FromString(userID); err != nil {
+	id, err := uuid.FromString(userID); if err != nil {
 		_ = utils.SendError(w, http.StatusBadRequest, "shared_validation_error: malformed id", nil)
 		return
 	}
 
-	_ = utils.SendSuccess(w, http.StatusOK, "User retrieved successfully", models.UserResponse{
-		ID:          user.ID,
-		Email:       user.Email,
-		FirstName:   user.FirstName,
-		LastName:    user.LastName,
-		DateOfBirth: user.DOB.Format("2006-01-02"),
-		Avatar:      user.Avatar,
-		Nickname:    user.Nickname,
-		AboutMe:     user.AboutMe,
-		IsPublic:    user.IsPublic,
-		CreatedAt:   user.CreatedAt,
-	})
+	payload, err := h.userService.GetByID(id)
+	if err != nil {
+		if errors.Is(err, services.ErrPostNotFound) {
+			_ = utils.SendError(w, http.StatusNotFound, "user not found", nil)
+			return
+		}
+		if errors.Is(err, services.ErrPostForbidden) {
+			_ = utils.SendError(w, http.StatusForbidden, "You do not have access to this post", nil)
+			return
+		}
+		_ = utils.SendError(w, http.StatusInternalServerError, "Internal server error", nil)
+		return
+	}
+	_ = utils.SendSuccess(w, http.StatusOK, "user retrieved successfully", payload)
 }
 
 func (h *UserHandler) SearchPublicUsers(w http.ResponseWriter, r *http.Request) {
